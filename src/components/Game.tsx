@@ -112,9 +112,9 @@ export default function Game() {
       {/* the sun — offset to the right so it's never hidden behind the transcript. it sinks as light is spent. */}
       <div
         aria-hidden
-        className="pointer-events-none absolute left-[72%] -z-0 h-[46vmin] w-[46vmin] -translate-x-1/2 rounded-full blur-[2px]"
+        className="pointer-events-none absolute left-[76%] -z-0 h-[46vmin] w-[46vmin] -translate-x-1/2 rounded-full blur-[2px]"
         style={{
-          top: `${(1 - r) * 72 + 2}%`,
+          top: `${(1 - r) * 64 + 12}%`,
           background: `radial-gradient(circle, ${sunCol} 0%, ${mix(sunCol, skyBot, 0.6)} 45%, transparent 70%)`,
           opacity: clampR(r * 1.5),
           transition: `top ${ease1200}, opacity ${ease1200}`,
@@ -237,8 +237,8 @@ function Header({ state, r, onHelp }: { state: GameState; r: number; onHelp: () 
           <span className={`font-[family-name:var(--font-sans)] text-[11px] lowercase tracking-wide text-bone-dim ${shadow}`}>
             night {state.turn} of {state.econ.turns} · {PHASE_NAME(r)}
           </span>
-          <button onClick={onHelp} aria-label="how to play" className="inline-flex h-6 w-6 items-center justify-center rounded-full text-[11px] text-bone-dim ring-1 ring-white/15 hover:text-bone hover:ring-white/40">
-            ?
+          <button onClick={onHelp} aria-label="how to play" className="inline-flex h-11 w-11 items-center justify-center rounded-full text-[12px] text-bone-dim hover:text-bone">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full ring-1 ring-white/15 hover:ring-white/40">?</span>
           </button>
         </div>
       </div>
