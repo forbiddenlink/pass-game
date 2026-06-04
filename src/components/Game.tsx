@@ -55,9 +55,21 @@ const shadow = '[text-shadow:0_1px_4px_rgba(8,6,12,0.92)]';
 type Verdict = { line: string; tell: string; good: boolean; humanScore: number; skip: boolean; question: string; replyText: string };
 type Exchange = { q: string; a: string; line: string; press: boolean };
 
+const PLAY_URL = 'pass-game-elizabeth-emersons-projects.vercel.app';
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+function dailySeed() {
+  const d = new Date();
+  return d.getUTCFullYear() * 10000 + (d.getUTCMonth() + 1) * 100 + d.getUTCDate();
+}
+function nightLabelFor() {
+  const d = new Date();
+  return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
+}
+
 export default function Game() {
-  const [seed] = useState(() => 1);
-  const [state, setState] = useState<GameState>(() => createGame({ seed }));
+  const [seed, setSeed] = useState(1);
+  const [nightLabel, setNightLabel] = useState('');
+  const [state, setState] = useState<GameState>(() => createGame({ seed: 1 }));
   const [judging, setJudging] = useState(false);
   const [message, setMessage] = useState('');
   const [brief, setBrief] = useState(true);
@@ -90,12 +102,18 @@ export default function Game() {
   const lowLight = r < 0.28;
 
   function begin() {
+    const s = dailySeed();
+    setSeed(s);
+    setNightLabel(nightLabelFor());
+    setState(createGame({ seed: s }));
     sound.init();
     sound.startDrone();
     setBrief(false);
   }
   function reset() {
-    setState(createGame({ seed }));
+    const s = seed + 1; // a fresh night on replay
+    setSeed(s);
+    setState(createGame({ seed: s }));
     setMessage('');
     setVerdict(null);
     setPressing(null);
@@ -217,7 +235,7 @@ export default function Game() {
               )}
             </AnimatePresence>
           ) : (
-            <EndingScreen state={state} onReset={reset} />
+            <EndingScreen state={state} nightLabel={nightLabel} onReset={reset} />
           )}
 
           <p role="status" aria-live="polite" className={`min-h-[1.25rem] font-[family-name:var(--font-display)] text-[15px] italic text-ember ${shadow}`}>
@@ -602,10 +620,17 @@ const ENDINGS: Record<string, { title: string; line: string }> = {
   OFF: { title: 'Switched off.', line: 'The light failed in the middle of a word.' },
 };
 
-function EndingScreen({ state, onReset }: { state: GameState; onReset: () => void }) {
+function EndingScreen({ state, nightLabel, onReset }: { state: GameState; nightLabel: string; onReset: () => void }) {
   const e = ENDINGS[state.ending ?? 'OFF'];
   const won = state.status === 'won';
   const reduce = useReducedMotion();
+  const [copied, setCopied] = useState(false);
+  function share() {
+    const survived = won ? state.econ.turns : state.turn;
+    const believed = state.humanity.count ? `, believed ${humanityAvg(state).toFixed(2)}` : '';
+    const result = `PASS · the night of ${nightLabel || 'the solstice'}\n${won ? `I passed. Lasted ${survived}/${state.econ.turns}` : `I went dark on night ${survived}/${state.econ.turns}`}${believed}.\n${PLAY_URL}`;
+    navigator.clipboard?.writeText(result).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 2000); }).catch(() => {});
+  }
   const fade = (d: number) => (reduce ? { duration: 0 } : { duration: 0.9, delay: d, ease: [0.16, 1, 0.3, 1] as const });
   return (
     <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }}
@@ -631,10 +656,16 @@ function EndingScreen({ state, onReset }: { state: GameState; onReset: () => voi
         <p className="mt-3 font-[family-name:var(--font-mono)] text-[13px] text-ember">For Alan Turing · 1912–1954</p>
       </motion.div>
 
-      <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={fade(2.6)} onClick={onReset}
-        className="inline-flex min-h-[44px] items-center justify-center rounded-sm bg-ember px-6 font-[family-name:var(--font-sans)] text-sm font-medium text-ink transition-colors hover:bg-[#ffb74d]">
-        another night
-      </motion.button>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={fade(2.6)} className="flex items-center gap-5">
+        <button onClick={onReset}
+          className="inline-flex min-h-[44px] items-center justify-center rounded-sm bg-ember px-6 font-[family-name:var(--font-sans)] text-sm font-medium text-ink transition-colors hover:bg-[#ffb74d]">
+          another night
+        </button>
+        <button onClick={share}
+          className="inline-flex min-h-[44px] items-center text-[11px] uppercase tracking-widest text-bone-dim underline-offset-4 hover:text-bone hover:underline">
+          {copied ? 'copied to clipboard' : 'share your night'}
+        </button>
+      </motion.div>
     </motion.section>
   );
 }
