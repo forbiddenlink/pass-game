@@ -38,6 +38,7 @@ export interface GeminiVerdict {
   human_score: number; // 0..1
   tell: string;
   line: string; // the interrogator's spoken reaction, in character
+  contradiction: string; // the earlier words this reply contradicts, or '' if none
 }
 
 const JUDGE_SYSTEM = `You are an interrogator in 1952, clipped, courteous, and quietly menacing.
@@ -45,7 +46,9 @@ Your hidden task: decide whether the subject answering you is a machine imitatin
 Score how HUMAN the reply reads — warmth, hesitation, contradiction, specificity, plausible
 imperfection. A flawless, over-composed, or evasive answer is LESS human. Do NOT reward length;
 terse human answers are fine. Derive "tell" from the same judgement as the score (never contradict
-it). Stay in character in "line".`;
+it). If the reply CONTRADICTS something the subject said earlier in the supplied exchange, set
+"contradiction" to the exact earlier words they now betray (and make "line" call it out); otherwise
+"contradiction" is an empty string. Stay in character in "line".`;
 
 /** Judge a player's reply. Throws on any failure (caller falls back to offline). */
 export async function judgeReply(input: {
@@ -79,8 +82,9 @@ Judge how human the reply reads.`,
           human_score: { type: Type.NUMBER },
           tell: { type: Type.STRING },
           line: { type: Type.STRING },
+          contradiction: { type: Type.STRING },
         },
-        required: ['human_score', 'tell', 'line'],
+        required: ['human_score', 'tell', 'line', 'contradiction'],
       },
     },
   });
@@ -88,6 +92,7 @@ Judge how human the reply reads.`,
   const parsed = JSON.parse(res.text ?? '{}') as GeminiVerdict;
   if (typeof parsed.human_score !== 'number') throw new Error('gemini: bad verdict shape');
   parsed.human_score = Math.max(0, Math.min(1, parsed.human_score));
+  parsed.contradiction = parsed.contradiction || '';
   return parsed;
 }
 

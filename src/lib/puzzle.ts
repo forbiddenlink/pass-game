@@ -47,6 +47,9 @@ export const QUESTIONS: { text: string; theme: ThemeTag }[] = [
 
 const VIGENERE_KEYS = ['sun', 'dusk', 'enigma', 'rotor', 'solace', 'turing'];
 
+// The last night's question — one you cannot answer without giving yourself away.
+const FINAL_QUESTION = 'if you could choose to feel pain would you';
+
 // ---- mulberry32 seeded RNG (matches cipher.makeSubstitution's family) ----
 function rng(seed: number) {
   let s = seed >>> 0;
@@ -125,11 +128,13 @@ export interface BuildArgs {
 export function buildPuzzle(args: BuildArgs): Puzzle {
   const { seed, turn, suspicion } = args;
   const picked = args.plaintext
-    ? { text: normalize(args.plaintext), theme: args.themeTag ?? 'identity' }
-    : (() => {
-        const q = pickQuestion(seed, turn);
-        return { text: normalize(q.text), theme: q.theme };
-      })();
+    ? { text: normalize(args.plaintext), theme: (args.themeTag ?? 'identity') as ThemeTag }
+    : turn === 8
+      ? { text: FINAL_QUESTION, theme: 'identity' as ThemeTag } // the unanswerable last question
+      : (() => {
+          const q = pickQuestion(seed, turn);
+          return { text: normalize(q.text), theme: q.theme };
+        })();
 
   const kind = cipherKindForTurn(turn);
   let { spec, revealedKey } = buildCipher(kind, seed, turn, suspicion);

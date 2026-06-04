@@ -22,7 +22,7 @@ export async function POST(req: Request) {
   if (geminiEnabled()) {
     try {
       const v = await judgeReply({ question, reply, recentTranscript });
-      return Response.json({ humanScore: v.human_score, tell: v.tell, line: v.line, source: 'gemini' });
+      return Response.json({ humanScore: v.human_score, tell: v.tell, line: v.line, contradiction: v.contradiction, source: 'gemini' });
     } catch {
       /* fall through to offline */
     }

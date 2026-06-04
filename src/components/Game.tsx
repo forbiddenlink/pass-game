@@ -53,7 +53,7 @@ const HINT_LABEL: Record<string, string> = {
 };
 const shadow = '[text-shadow:0_1px_4px_rgba(8,6,12,0.92)]';
 
-type Verdict = { line: string; tell: string; good: boolean; humanScore: number; skip: boolean; question: string; replyText: string };
+type Verdict = { line: string; tell: string; good: boolean; humanScore: number; skip: boolean; question: string; replyText: string; contradiction: string };
 type Exchange = { q: string; a: string; line: string; press: boolean };
 
 const PLAY_URL = 'pass-game-elizabeth-emersons-projects.vercel.app';
@@ -162,18 +162,20 @@ export default function Game() {
   }
   async function onReply(text: string) {
     const q = pressing ?? state.puzzle.plaintext;
+    const recentTranscript = transcript.slice(-5).map((e) => `They asked: "${e.q}" — the subject said: "${e.a}"`).join('\n');
     setJudging(true);
-    let humanScore: number, tell: string, line: string;
+    let humanScore: number, tell: string, line: string, contradiction = '';
     try {
       const res = await fetch('/api/judge', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ question: q, reply: text }),
+        body: JSON.stringify({ question: q, reply: text, recentTranscript }),
       });
       const j = await res.json();
       humanScore = j.humanScore;
       tell = j.tell;
       line = j.line || interrogatorLine(j.humanScore, text.length);
+      contradiction = j.contradiction || '';
     } catch {
       const h = scoreReply(text);
       humanScore = h.score;
@@ -181,13 +183,14 @@ export default function Game() {
       line = interrogatorLine(h.score, text.length);
     }
     setJudging(false);
-    const good = humanScore >= 0.45;
+    const good = humanScore >= 0.45 && !contradiction;
     sound.verdict(good);
-    setVerdict({ line, tell, good, humanScore, skip: false, question: q, replyText: text });
+    if (contradiction) dread();
+    setVerdict({ line, tell, good, humanScore, skip: false, question: q, replyText: text, contradiction });
   }
   function onSkip() {
     sound.verdict(false);
-    setVerdict({ line: interrogatorLine(0, state.turn), tell: '', good: false, humanScore: 0, skip: true, question: pressing ?? state.puzzle.plaintext, replyText: '' });
+    setVerdict({ line: interrogatorLine(0, state.turn), tell: '', good: false, humanScore: 0, skip: true, question: pressing ?? state.puzzle.plaintext, replyText: '', contradiction: '' });
   }
   async function resolveVerdict() {
     if (!verdict) return;
@@ -488,6 +491,12 @@ function Transcript({ items }: { items: Exchange[] }) {
 function VerdictBeat({ verdict, onContinue, last }: { verdict: Verdict; onContinue: () => void; last: boolean }) {
   return (
     <>
+      {verdict.contradiction && (
+        <div className="rounded-sm border border-[#a3302a]/50 bg-[#a3302a]/10 p-3">
+          <p className="text-[10px] uppercase tracking-[0.3em] text-[#d9483c]">caught in a contradiction</p>
+          <p className="mt-1 text-[13px] italic leading-relaxed text-bone-dim">But a moment ago you said: &ldquo;{verdict.contradiction}&rdquo;</p>
+        </div>
+      )}
       <Label>the interrogator</Label>
       <Typewriter text={verdict.line} className="font-[family-name:var(--font-display)] text-xl italic leading-snug text-bone" />
       {verdict.tell && <p className="text-[12px] text-bone-dim">{verdict.tell}.</p>}
@@ -740,11 +749,14 @@ function EndingScreen({ state, nightLabel, caseNo, dossier, onReset, onAbout }: 
         </motion.div>
       )}
 
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={fade(1.9)} className="max-w-md border-t border-white/10 pt-6">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={fade(1.9)} className="flex max-w-md flex-col gap-3 border-t border-white/10 pt-6">
         <p className="font-[family-name:var(--font-display)] text-[15px] italic leading-relaxed text-bone-dim">
-          The test you sat tonight was imagined by a man who spent his life being tested. Inspired by the work of Alan Turing.
+          The interrogation you survived is the test he invented. In 1952 he sat on the other side of it. He answered their questions honestly, and he was not believed.
         </p>
-        <p className="mt-3 font-[family-name:var(--font-mono)] text-[13px] text-ember">For Alan Turing · 1912–1954</p>
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={fade(3.0)} className="font-[family-name:var(--font-display)] text-[15px] italic leading-relaxed text-bone">
+          You spent tonight as a machine, trying to pass. So did he.
+        </motion.p>
+        <p className="mt-1 font-[family-name:var(--font-mono)] text-[13px] text-ember">For Alan Turing · 1912–1954</p>
         <button onClick={onAbout} className="mt-3 text-[11px] uppercase tracking-widest text-bone-dim underline-offset-4 hover:text-bone hover:underline">
           read his story
         </button>
