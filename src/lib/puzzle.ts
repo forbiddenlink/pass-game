@@ -65,24 +65,29 @@ export function pickQuestion(seed: number, turn: number) {
 }
 
 type CipherKind = 'caesar' | 'substitution' | 'vigenere';
+// Interleaved so the player never sits through a long run of the same puzzle
+// (playtest: 6 substitutions back-to-back was the weakest stretch). Caesar
+// "breathers" break up the harder substitution work; vigenere is the climax.
+const CADENCE: CipherKind[] = [
+  'caesar', 'caesar', 'substitution', 'substitution', 'caesar', 'substitution', 'substitution', 'vigenere',
+];
 function cipherKindForTurn(turn: number): CipherKind {
-  if (turn <= 2) return 'caesar';
-  if (turn <= 8) return 'substitution';
-  return 'vigenere';
+  return CADENCE[(turn - 1) % CADENCE.length] ?? 'substitution';
 }
-const hasPrefill = (turn: number) => turn >= 6 && turn <= 8;
+// Every substitution gets some pre-revealed letters now (cuts the grind); more later.
+const prefillFraction = (turn: number) => (turn >= 6 ? 0.4 : 0.25);
 
 function difficultyFor(turn: number, suspicion: number): number {
-  const base = turn <= 2 ? 1 : turn <= 5 ? 2 : turn <= 8 ? 3 : 4;
+  const base = turn <= 2 ? 1 : turn <= 5 ? 2 : turn <= 7 ? 3 : 4;
   return Math.min(5, base + (suspicion >= 0.6 ? 1 : 0));
 }
 
-/** Deterministic set of letter-position indices to pre-reveal (~35% of letters). */
-function prefillIndices(plain: string, seed: number, turn: number): number[] {
+/** Deterministic set of letter-position indices to pre-reveal. */
+function prefillIndices(plain: string, seed: number, turn: number, fraction: number): number[] {
   const r = rng((hash(seed, turn) ^ 0x9e3779b9) >>> 0);
   const letterPositions: number[] = [];
   for (let i = 0; i < plain.length; i++) if (plain[i] !== ' ') letterPositions.push(i);
-  const reveal = Math.max(1, Math.round(letterPositions.length * 0.35));
+  const reveal = Math.max(1, Math.round(letterPositions.length * fraction));
   // shuffle then take `reveal`
   for (let i = letterPositions.length - 1; i > 0; i--) {
     const j = Math.floor(r() * (i + 1));
@@ -94,7 +99,8 @@ function prefillIndices(plain: string, seed: number, turn: number): number[] {
 function buildCipher(kind: CipherKind, seed: number, turn: number, suspicion: number) {
   const r = rng((hash(seed, turn) ^ 0x517cc1b7) >>> 0);
   if (kind === 'caesar') {
-    const shift = 3 + Math.round(suspicion * 8) + Math.floor(r() * 3); // 3..13-ish
+    // varied per turn (seeded by turn) so consecutive Caesars don't repeat a shift
+    const shift = Math.min(24, 4 + Math.floor(r() * 15) + Math.round(suspicion * 4));
     return { spec: { type: 'caesar', shift } as CipherSpec };
   }
   if (kind === 'substitution') {
@@ -139,7 +145,7 @@ export function buildPuzzle(args: BuildArgs): Puzzle {
     cipher: spec,
     ciphertext: encode(picked.text, spec),
     difficulty: difficultyFor(turn, suspicion),
-    prefilled: hasPrefill(turn) ? prefillIndices(picked.text, seed, turn) : [],
+    prefilled: kind === 'substitution' ? prefillIndices(picked.text, seed, turn, prefillFraction(turn)) : [],
     ...(revealedKey ? { revealedKey } : {}),
   };
 }

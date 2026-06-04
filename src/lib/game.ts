@@ -23,7 +23,7 @@ export interface Econ {
 }
 
 // Defaults tuned for a ~9-turn, 4-6 min night. Balance knobs — adjust in playtest.
-export const DEFAULT_ECON: Econ = { start: 170, decode: 10, reply: 8, wrong: 7, hint: 4, turns: 9 };
+export const DEFAULT_ECON: Econ = { start: 160, decode: 10, reply: 8, wrong: 7, hint: 4, turns: 8 };
 
 const START_SUSPICION = 0.2;
 const A_THRESHOLD = 0.75; // raised per prototype finding (heuristic over-scored robots)

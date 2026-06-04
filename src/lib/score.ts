@@ -17,7 +17,7 @@ const clamp01 = (n: number) => (Number.isFinite(n) ? Math.max(0, Math.min(1, n))
 
 export function scoreReply(reply: string): ReplyScore {
   const text = reply.trim();
-  if (!text) return { score: 0, tell: 'said nothing — the silence itself is a tell' };
+  if (!text) return { score: 0, tell: 'You said nothing. The silence is its own answer' };
 
   const lower = text.toLowerCase();
   const has = (re: RegExp) => re.test(lower);
@@ -29,32 +29,32 @@ export function scoreReply(reply: string): ReplyScore {
   if (words >= 5 && words <= 28) s += 0.1;
   else if (words < 5) {
     s -= 0.15;
-    tells.push('too clipped — humans ramble');
+    tells.push('Too clipped. People ramble');
   } else {
     s -= 0.15;
-    tells.push('over-long, like a prepared statement');
+    tells.push('Over-long, like a prepared statement');
   }
 
   if (has(/\b(maybe|i think|kind of|sort of|dunno|honestly|i guess|i feel|not sure)\b/)) {
     s += 0.15;
-    tells.push('it hedges — that reads human');
+    tells.push('It hesitates, the way people do');
   }
   if (has(/\b(i|my|me|i'm|i've|i'd)\b/)) s += 0.1;
   if (has(/'(s|t|m|ve|re|ll|d)\b/)) s += 0.08;
-  else tells.push('not one contraction — stiff');
+  else tells.push('Not one contraction. Stiff');
   if (has(/\d|warm|cold|smell|hands|mother|rain|window|afraid|quiet|light|dark/)) {
     s += 0.1;
-    tells.push('a specific, sensory detail');
+    tells.push('A specific, almost tender detail');
   }
 
   // too-perfect penalty: long + fully punctuated + zero contractions
   if (words >= 12 && /[.?!]$/.test(text) && !/'(s|t|m|ve|re|ll|d)\b/.test(text)) {
     s -= 0.2;
-    tells.push('too composed — a machine over-explains');
+    tells.push('Too composed. A machine over-explains');
   }
 
   return {
     score: clamp01(s),
-    tell: tells[0] ?? 'hard to read — flat, neither warm nor cold',
+    tell: tells[0] ?? 'Hard to read. Flat, neither warm nor cold',
   };
 }

@@ -48,7 +48,7 @@ describe('buildPuzzle — every generated puzzle is solvable', () => {
   });
 });
 
-describe('cadence (research-tuned difficulty ramp)', () => {
+describe('cadence (interleaved so no long same-cipher run)', () => {
   const P = (turn: number): Puzzle => buildPuzzle({ seed: 1, turn, suspicion: 0.2 });
 
   it('turns 1-2 are caesar', () => {
@@ -56,21 +56,26 @@ describe('cadence (research-tuned difficulty ramp)', () => {
     expect(P(2).cipher.type).toBe('caesar');
   });
 
-  it('turns 3-5 are substitution', () => {
+  it('turns 3-4 are substitution', () => {
     expect(P(3).cipher.type).toBe('substitution');
-    expect(P(5).cipher.type).toBe('substitution');
+    expect(P(4).cipher.type).toBe('substitution');
   });
 
-  it('turns 6-8 carry partial pre-decode (prefilled letters)', () => {
+  it('turn 5 is a caesar breather between substitution runs', () => {
+    expect(P(5).cipher.type).toBe('caesar');
+  });
+
+  it('every substitution turn carries pre-revealed letters (cuts the grind)', () => {
+    expect(P(3).prefilled.length).toBeGreaterThan(0);
     expect(P(6).prefilled.length).toBeGreaterThan(0);
-    expect(P(8).prefilled.length).toBeGreaterThan(0);
   });
 
-  it('turn 9 is the climactic vigenere', () => {
-    expect(P(9).cipher.type).toBe('vigenere');
+  it('turn 8 is the climactic vigenere', () => {
+    expect(P(8).cipher.type).toBe('vigenere');
   });
 
-  it('early turns have no prefilled help', () => {
+  it('caesar turns have no prefilled help', () => {
     expect(P(1).prefilled.length).toBe(0);
+    expect(P(5).prefilled.length).toBe(0);
   });
 });
