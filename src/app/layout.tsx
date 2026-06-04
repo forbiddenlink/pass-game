@@ -17,6 +17,18 @@ export const metadata: Metadata = {
   title: "PASS · a solstice interrogation",
   description:
     "Crack the interrogator's ciphers and answer human enough to be believed, before the solstice sun sets. An Alan Turing tribute. Judged live by Gemini.",
+  openGraph: {
+    title: "PASS · a solstice interrogation",
+    description: "You are the machine. Answer well. An Alan Turing tribute, judged live by Gemini.",
+    images: ["/og.png"],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "PASS · a solstice interrogation",
+    description: "You are the machine. Answer well. An Alan Turing tribute, judged live by Gemini.",
+    images: ["/og.png"],
+  },
 };
 
 export default function RootLayout({

@@ -123,6 +123,27 @@ const TitleCard: React.FC = () => {
   );
 };
 
+// A crafted 1200x630 noir cover for the DEV post + social previews (no Gemini needed).
+export const OgCard: React.FC = () => (
+  <AbsoluteFill style={{ backgroundColor: INK, fontFamily: serif }}>
+    <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse 50% 60% at 30% -5%, rgba(244,178,88,0.18), transparent 60%)' }} />
+    <div style={{ position: 'absolute', right: 96, top: 80, width: 300, height: 400, overflow: 'hidden', background: 'linear-gradient(#22304f, #7a3a22)', boxShadow: '0 0 90px rgba(0,0,0,0.75)' }}>
+      <div style={{ position: 'absolute', left: '50%', top: '40%', width: 150, height: 150, transform: 'translateX(-50%)', borderRadius: '50%', background: 'radial-gradient(circle, #fff2cf, #f0a338 40%, transparent 70%)', boxShadow: '0 0 90px 24px #e07b38' }} />
+      {[28, 50, 72].map((x) => (
+        <div key={x} style={{ position: 'absolute', top: 0, bottom: 0, left: `${x}%`, width: 4, background: '#05040a' }} />
+      ))}
+      <div style={{ position: 'absolute', left: 0, right: 0, top: '50%', height: 4, background: '#05040a' }} />
+      <div style={{ position: 'absolute', inset: 0, boxShadow: 'inset 0 0 0 4px #0a0810' }} />
+    </div>
+    <div style={{ position: 'absolute', left: 96, top: 300, display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ fontSize: 104, fontWeight: 600, letterSpacing: 22, color: BONE }}>PASS</div>
+      <div style={{ fontStyle: 'italic', fontSize: 30, color: DIM }}>a solstice interrogation · an Alan Turing tribute</div>
+      <div style={{ fontFamily: MONO, fontSize: 20, color: EMBER, marginTop: 8 }}>you are the machine. answer well.</div>
+    </div>
+    <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 38% 45%, transparent 38%, rgba(3,2,7,0.62) 100%)' }} />
+  </AbsoluteFill>
+);
+
 export const Trailer: React.FC = () => (
   <AbsoluteFill style={{ backgroundColor: INK }}>
     <Series>
