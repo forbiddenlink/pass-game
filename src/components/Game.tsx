@@ -156,7 +156,7 @@ export default function Game() {
       return;
     }
     // a suspicious spoken answer earns ONE sharper follow-up — the interrogation presses
-    if (!v.skip && !pressed && v.humanScore < 0.4) {
+    if (!v.skip && !pressed && v.humanScore < 0.5) {
       setState(next); // light + humanity recorded, phase still 'replying'
       setPressed(true);
       setPressing(''); // loading sentinel -> press panel shows "they lean in close…"

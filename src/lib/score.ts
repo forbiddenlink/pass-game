@@ -49,8 +49,13 @@ export function scoreReply(reply: string): ReplyScore {
 
   // too-perfect penalty: long + fully punctuated + zero contractions
   if (words >= 12 && /[.?!]$/.test(text) && !/'(s|t|m|ve|re|ll|d)\b/.test(text)) {
-    s -= 0.2;
+    s -= 0.25;
     tells.push('Too composed. A machine over-explains');
+  }
+  // long, abstract, latinate vocabulary reads machine-like
+  if (has(/\b(operational|maximal|denotes|duration|illumination|optimal|functional|parameters|process|data|unit)\b/)) {
+    s -= 0.12;
+    tells.push('That is the vocabulary of a manual, not a person');
   }
 
   return {
