@@ -81,9 +81,9 @@ export default function Scene({
       {/* vignette */}
       <div className="absolute inset-0" style={{ background: `radial-gradient(ellipse at 50% 40%, transparent 38%, rgba(3,2,7,${vignette}) 100%)` }} />
 
-      {/* static film grain (cheap) */}
-      <svg className="absolute inset-0 h-full w-full opacity-[0.045] mix-blend-overlay">
-        <filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="2" stitchTiles="stitch" /></filter>
+      {/* rolling film grain (cheap — drift via transform, not re-rendered turbulence) */}
+      <svg className="grain absolute inset-[-6%] h-[112%] w-[112%] opacity-[0.05] mix-blend-overlay">
+        <filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.7" numOctaves="2" stitchTiles="stitch" /></filter>
         <rect width="100%" height="100%" filter="url(#noise)" />
       </svg>
     </div>

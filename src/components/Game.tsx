@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
+import { AnimatePresence, motion, useReducedMotion, useAnimationControls } from 'motion/react';
 import {
   createGame,
   attemptDecode,
@@ -81,6 +81,11 @@ export default function Game() {
   const [transcript, setTranscript] = useState<Exchange[]>([]);
   const [muted, setMuted] = useState(false);
   const reduce = useReducedMotion();
+  const shake = useAnimationControls();
+  const jolt = (i: number) => {
+    if (reduce) return;
+    shake.start({ x: [0, -i, i * 0.8, -i * 0.55, i * 0.3, 0], transition: { duration: 0.34, ease: 'easeOut' } });
+  };
 
   const r = clampR(state.daylight / state.econ.start);
   const skyTop = tri(r, '#1b3a5c', '#2a2540', '#080610');
@@ -90,7 +95,7 @@ export default function Game() {
 
   useEffect(() => { sound.ambient(r); }, [r]);
   useEffect(() => {
-    if (state.status === 'lost') sound.switchOff();
+    if (state.status === 'lost') { sound.switchOff(); jolt(11); }
     if (state.status === 'won') sound.verdict(true);
   }, [state.status]);
   // the clock: ticks faster as the light fails — urgency without a real-time death
@@ -126,8 +131,7 @@ export default function Game() {
     const next = attemptDecode(state, guess);
     if (next === state) return;
     if (next.phase === 'replying') sound.resolved();
-    else if (next.status === 'lost') {/* switchOff via effect */}
-    else sound.tick();
+    else if (next.status !== 'lost') { sound.tick(); jolt(5); } // wrong guess: a small jolt
     setMessage(next.phase === 'decoding' && next.status === 'playing' ? `Not yet. The light slips. (−${state.econ.wrong})` : '');
     setState(next);
   }
@@ -208,7 +212,7 @@ export default function Game() {
         style={{ background: 'linear-gradient(to bottom, rgba(6,5,10,.55) 0%, transparent 15%, transparent 60%, rgba(8,6,12,.7) 100%)' }} />
 
       <div className="relative mx-auto flex min-h-[100dvh] max-w-2xl flex-col px-6 py-10 sm:py-14">
-        <div className="flex w-full max-w-[34rem] flex-col gap-8">
+        <motion.div animate={shake} className="flex w-full max-w-[34rem] flex-col gap-8">
           <Header state={state} r={r} muted={muted} lowLight={lowLight} onHelp={() => setBrief(true)} onMute={() => setMuted(sound.toggleMute())} />
 
           {state.status === 'playing' && transcript.length > 0 && <Transcript items={transcript} />}
@@ -243,7 +247,7 @@ export default function Game() {
           <p role="status" aria-live="polite" className={`min-h-[1.25rem] font-[family-name:var(--font-display)] text-[15px] italic text-ember ${shadow}`}>
             {message}
           </p>
-        </div>
+        </motion.div>
       </div>
 
       <AnimatePresence>{brief && <Brief onBegin={begin} onAbout={() => setAbout(true)} />}</AnimatePresence>
