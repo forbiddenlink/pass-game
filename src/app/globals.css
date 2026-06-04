@@ -40,7 +40,26 @@ body {
   background: color-mix(in oklab, var(--color-ember) 35%, transparent);
 }
 
+/* the room breathes: lamp sway + flicker, a slow grain drift */
+@keyframes lamp-sway {
+  0%, 100% { transform: rotate(-1.6deg); }
+  50% { transform: rotate(1.6deg); }
+}
+@keyframes lamp-flicker {
+  0%, 96%, 100% { opacity: 1; }
+  97% { opacity: 0.82; }
+  98.5% { opacity: 0.94; }
+}
+@keyframes grain-drift {
+  0% { transform: translate(0, 0); }
+  100% { transform: translate(-3%, -2%); }
+}
+.lamp-sway { animation: lamp-sway 7s ease-in-out infinite; transform-origin: top center; }
+.lamp-flicker { animation: lamp-flicker 5s linear infinite; }
+.grain { animation: grain-drift 8s steps(6) infinite alternate; }
+
 @media (prefers-reduced-motion: reduce) {
+  .lamp-sway, .lamp-flicker, .grain { animation: none !important; }
   *,
   *::before,
   *::after {

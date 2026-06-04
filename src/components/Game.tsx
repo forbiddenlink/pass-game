@@ -15,6 +15,7 @@ import { decode } from '@/lib/cipher';
 import { scoreReply } from '@/lib/score';
 import { interrogatorLine } from '@/lib/lines';
 import { sound } from '@/lib/sound';
+import Scene from '@/components/Scene';
 import type { Puzzle } from '@/lib/puzzle';
 
 const ALPHABET = 'abcdefghijklmnopqrstuvwxyz'.split('');
@@ -131,15 +132,9 @@ export default function Game() {
   return (
     <main className="relative min-h-[100dvh] overflow-hidden"
       style={{ background: `linear-gradient(${skyTop} 0%, ${skyBot} 100%)`, transition: `background ${ease1200}` }}>
-      <div aria-hidden className="pointer-events-none absolute left-[76%] -z-0 h-[46vmin] w-[46vmin] -translate-x-1/2 rounded-full blur-[2px]"
-        style={{
-          top: `${(1 - r) * 64 + 12}%`,
-          background: `radial-gradient(circle, ${sunCol} 0%, ${mix(sunCol, skyBot, 0.6)} 45%, transparent 70%)`,
-          opacity: clampR(r * 1.5),
-          transition: `top ${ease1200}, opacity ${ease1200}`,
-        }} />
+      <Scene r={r} suspicion={state.suspicion} skyTop={skyTop} skyBot={skyBot} sunCol={sunCol} />
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-0"
-        style={{ background: 'linear-gradient(to bottom, transparent 28%, rgba(8,6,12,.6) 100%)' }} />
+        style={{ background: 'linear-gradient(to bottom, transparent 22%, rgba(8,6,12,.66) 100%)' }} />
 
       <div className="relative mx-auto flex min-h-[100dvh] max-w-2xl flex-col px-6 py-10 sm:py-14">
         <div className="flex w-full max-w-[34rem] flex-col gap-8">
@@ -198,6 +193,30 @@ function Typewriter({ text, className, speed = 26 }: { text: string; className?:
       {n < text.length && <span className="text-ember">▍</span>}
     </span>
   );
+}
+
+/* ---------- decrypt reveal: glyphs scramble, then lock left-to-right ---------- */
+const GLYPHS = 'abcdefghijklmnopqrstuvwxyz';
+function DecryptText({ text, className }: { text: string; className?: string }) {
+  const reduce = useReducedMotion();
+  const [out, setOut] = useState(text);
+  useEffect(() => {
+    if (reduce) { setOut(text); return; }
+    const settleAt = text.split('').map((_, i) => 5 + i * 1.3);
+    let frame = 0;
+    const id = window.setInterval(() => {
+      frame += 1;
+      setOut(
+        text
+          .split('')
+          .map((ch, i) => (ch === ' ' || ch === '“' || ch === '”' || ch === '?' ? ch : frame >= settleAt[i] ? ch : GLYPHS[Math.floor(Math.random() * 26)]))
+          .join(''),
+      );
+      if (frame > settleAt[settleAt.length - 1]) { window.clearInterval(id); setOut(text); }
+    }, 38);
+    return () => window.clearInterval(id);
+  }, [text, reduce]);
+  return <span className={className}>{out}</span>;
 }
 
 function Brief({ onBegin }: { onBegin: () => void }) {
@@ -447,7 +466,7 @@ function ReplyPanel({ question, judging, onReply, onSkip }: { question: string; 
   return (
     <>
       <Label>decoded · they ask</Label>
-      <Typewriter text={`“${question}?”`} className="font-[family-name:var(--font-display)] text-2xl italic leading-snug text-bone" />
+      <DecryptText text={`“${question}?”`} className="font-[family-name:var(--font-display)] text-2xl italic leading-snug text-bone" />
       <p className="text-[12px] text-bone-dim">Answer as a person to be believed (it costs light), or stay silent and keep what you have.</p>
       <textarea id="reply" name="reply" value={val} onChange={(e) => setVal(e.target.value)} disabled={judging} rows={2} aria-label="your reply"
         placeholder="say something a person would say…"
