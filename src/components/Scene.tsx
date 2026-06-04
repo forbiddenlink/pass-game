@@ -57,12 +57,13 @@ export default function Scene({
       <div className="lamp-sway absolute left-1/2 top-0 -translate-x-1/2" style={{ animationDuration: `${swaySpeed}s` }}>
         <div className="mx-auto h-[13vmin] w-px bg-black/40" />
         <div className="lamp-flicker mx-auto -mt-1 h-3 w-3 rounded-full" style={{ background: LAMP, boxShadow: `0 0 26px 7px ${LAMP}`, opacity: lampGlow }} />
-        <div className="lamp-flicker mx-auto h-[66vmin] w-[46vmin]"
-          style={{
-            opacity: lampGlow,
-            background: `radial-gradient(ellipse 60% 92% at 50% 0%, color-mix(in oklab, ${LAMP} 58%, transparent) 0%, transparent 70%)`,
-            clipPath: 'polygon(46% 0%, 54% 0%, 100% 100%, 0% 100%)',
-          }} />
+        <div className="relative mx-auto h-[66vmin] w-[46vmin]">
+          <div className="lamp-flicker absolute inset-0"
+            style={{ opacity: lampGlow, background: `radial-gradient(ellipse 60% 92% at 50% 0%, color-mix(in oklab, ${LAMP} 58%, transparent) 0%, transparent 70%)`, clipPath: 'polygon(46% 0%, 54% 0%, 100% 100%, 0% 100%)' }} />
+          {/* volumetric god rays raking down through the cone */}
+          <div className="godray absolute inset-0"
+            style={{ opacity: lampGlow * 0.5, background: 'repeating-conic-gradient(from 0deg at 50% -6%, transparent 0deg 2.2deg, rgba(244,178,88,0.09) 2.2deg 3deg)', clipPath: 'polygon(46% 0%, 54% 0%, 100% 100%, 0% 100%)', filter: 'blur(1.5px)', mixBlendMode: 'screen' }} />
+        </div>
       </div>
 
       {/* the desk: a warm lit surface under the lamp so the page rests in the room, not in a void */}

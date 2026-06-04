@@ -86,6 +86,11 @@ export default function Game() {
     if (reduce) return;
     shake.start({ x: [0, -i, i * 0.8, -i * 0.55, i * 0.3, 0], transition: { duration: 0.34, ease: 'easeOut' } });
   };
+  const flash = useAnimationControls();
+  const dread = () => {
+    if (reduce) return;
+    flash.start({ opacity: [0, 0.5, 0], transition: { duration: 0.8, ease: 'easeOut' } });
+  };
 
   const r = clampR(state.daylight / state.econ.start);
   const skyTop = tri(r, '#1b3a5c', '#2a2540', '#080610');
@@ -174,6 +179,7 @@ export default function Game() {
     setTranscript((t) => [...t, { q: v.question, a: v.skip ? '— silence —' : v.replyText, line: v.line, press: wasPress }]);
 
     const next = v.skip ? skipReply(state) : recordReply(state, v.humanScore);
+    if (next.suspicion > state.suspicion + 0.001) dread(); // their doubt rises — the room reddens
     if (next.status !== 'playing') {
       setState(next);
       setPressing(null);
@@ -210,6 +216,8 @@ export default function Game() {
       <Scene r={r} suspicion={state.suspicion} skyTop={skyTop} skyBot={skyBot} sunCol={sunCol} />
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-0"
         style={{ background: 'linear-gradient(to bottom, rgba(6,5,10,.55) 0%, transparent 15%, transparent 60%, rgba(8,6,12,.7) 100%)' }} />
+      <motion.div aria-hidden initial={{ opacity: 0 }} animate={flash} className="pointer-events-none absolute inset-0 z-10"
+        style={{ background: 'radial-gradient(ellipse at 50% 45%, transparent 30%, rgba(140,20,20,0.6) 100%)' }} />
 
       <div className="relative mx-auto flex min-h-[100dvh] max-w-2xl flex-col px-6 py-10 sm:py-14">
         <motion.div animate={shake} className="flex w-full max-w-[34rem] flex-col gap-8">
@@ -427,8 +435,10 @@ function Header({ state, r, muted, lowLight, onHelp, onMute }: { state: GameStat
           </button>
         </div>
       </div>
-      <div className="relative h-px w-full bg-white/10">
+      {/* the vise: daylight closes from the left, the interrogator's doubt from the right */}
+      <div className="relative h-[2px] w-full bg-white/10">
         <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-ember-deep to-ember" style={{ width: `${r * 100}%`, transition: 'width 700ms ease-out' }} />
+        <div className={`absolute inset-y-0 right-0 bg-gradient-to-l from-[#a3302a] to-[#d9483c] ${state.suspicion > 0.6 ? 'animate-pulse' : ''}`} style={{ width: `${state.suspicion * 100}%`, transition: 'width 500ms ease-out' }} />
       </div>
       <div className={`flex justify-between font-[family-name:var(--font-mono)] text-[10px] text-bone-dim ${shadow}`}>
         <span className={lowLight ? 'animate-pulse text-ember' : ''}>light {state.daylight}{lowLight ? ' · failing' : ''}</span>
