@@ -17,6 +17,7 @@ import { scoreReply } from '@/lib/score';
 import { interrogatorLine, pressLine } from '@/lib/lines';
 import { sound } from '@/lib/sound';
 import Scene from '@/components/Scene';
+import Rotor from '@/components/Rotor';
 import type { Puzzle } from '@/lib/puzzle';
 
 const ALPHABET = 'abcdefghijklmnopqrstuvwxyz'.split('');
@@ -345,8 +346,10 @@ function Panel({ children, reduce }: { children: React.ReactNode; reduce: boolea
     <motion.section
       initial={reduce ? false : { opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={reduce ? undefined : { opacity: 0, y: -10 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      className="flex flex-col gap-5 rounded-sm bg-[rgba(10,8,14,0.62)] p-6 backdrop-blur-[3px] ring-1 ring-white/5">
-      {children}
+      className="relative overflow-hidden rounded-sm bg-[rgba(10,8,14,0.66)] p-6 shadow-[0_10px_34px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-[3px]">
+      {/* the lamp pools warm light onto the page */}
+      <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_-12%,rgba(244,178,88,0.11),transparent_58%)]" />
+      <div className="relative flex flex-col gap-5">{children}</div>
     </motion.section>
   );
 }
@@ -459,13 +462,7 @@ function CaesarDial({ puzzle, hintUsed, onAttempt }: { puzzle: Puzzle; hintUsed:
     <div className="flex flex-col gap-4">
       <p aria-live="polite" className="font-[family-name:var(--font-display)] text-lg text-bone">{preview}</p>
       {hintUsed && <p className="text-[11px] uppercase tracking-widest text-ember">the rotor rests at {answer}</p>}
-      <label className="flex min-h-[44px] items-center gap-4 text-[11px] uppercase tracking-widest text-ash">
-        <span className="tabular-nums">rotor {shift}</span>
-        <input id="rotor" name="rotor" type="range" min={0} max={25} value={shift}
-          onChange={(e) => { setShift(Number(e.target.value)); sound.key(); }}
-          aria-label="cipher rotor" aria-valuetext={`rotor at ${shift} of 25`}
-          className="h-6 flex-1 cursor-pointer accent-ember" />
-      </label>
+      <Rotor shift={shift} onChange={setShift} />
       <Submit onClick={() => onAttempt(preview)} ready={looksEnglish(preview)} />
     </div>
   );
@@ -607,22 +604,37 @@ const ENDINGS: Record<string, { title: string; line: string }> = {
 
 function EndingScreen({ state, onReset }: { state: GameState; onReset: () => void }) {
   const e = ENDINGS[state.ending ?? 'OFF'];
+  const won = state.status === 'won';
+  const reduce = useReducedMotion();
+  const fade = (d: number) => (reduce ? { duration: 0 } : { duration: 0.9, delay: d, ease: [0.16, 1, 0.3, 1] as const });
   return (
-    <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1.1, ease: 'easeOut' }}
-      className="flex flex-1 flex-col items-start justify-center gap-8">
+    <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }}
+      className="flex flex-1 flex-col items-start justify-center gap-7 py-10">
+      {/* the horizon: a line of dawn if you survived, cold ash if you went dark */}
+      <motion.div initial={{ scaleX: 0, opacity: 0 }} animate={{ scaleX: 1, opacity: 1 }} transition={fade(0.2)}
+        className="h-[2px] w-full"
+        style={{ transformOrigin: 'left', background: won ? 'linear-gradient(90deg,#f0a338,transparent)' : 'linear-gradient(90deg,#39323f,transparent)', boxShadow: won ? '0 0 26px 2px rgba(240,163,56,0.45)' : 'none' }} />
+
+      <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={fade(0.5)} className="text-[11px] uppercase tracking-[0.3em] text-ash">
+        {won ? 'dawn breaks' : 'the room goes quiet'}
+      </motion.p>
+
       <div className="flex flex-col gap-3">
-        <h2 className="font-[family-name:var(--font-display)] text-3xl text-bone">{e.title}</h2>
-        <p className="max-w-sm text-[15px] leading-relaxed text-bone-dim">{e.line}</p>
+        <motion.h2 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={fade(0.7)} className="font-[family-name:var(--font-display)] text-3xl text-bone">{e.title}</motion.h2>
+        <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={fade(1.1)} className="max-w-sm text-[15px] leading-relaxed text-bone-dim">{e.line}</motion.p>
       </div>
-      <div className="max-w-md border-t border-white/10 pt-6">
+
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={fade(1.9)} className="max-w-md border-t border-white/10 pt-6">
         <p className="font-[family-name:var(--font-display)] text-[15px] italic leading-relaxed text-bone-dim">
           The test you sat tonight was imagined by a man who spent his life being tested. Inspired by the work of Alan Turing.
         </p>
         <p className="mt-3 font-[family-name:var(--font-mono)] text-[13px] text-ember">For Alan Turing · 1912–1954</p>
-      </div>
-      <button onClick={onReset} className="inline-flex min-h-[44px] items-center justify-center rounded-sm bg-ember px-6 font-[family-name:var(--font-sans)] text-sm font-medium text-ink transition-colors hover:bg-[#ffb74d]">
+      </motion.div>
+
+      <motion.button initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={fade(2.6)} onClick={onReset}
+        className="inline-flex min-h-[44px] items-center justify-center rounded-sm bg-ember px-6 font-[family-name:var(--font-sans)] text-sm font-medium text-ink transition-colors hover:bg-[#ffb74d]">
         another night
-      </button>
+      </motion.button>
     </motion.section>
   );
 }
