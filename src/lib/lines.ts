@@ -49,3 +49,30 @@ const PRESS = [
 export function pressLine(salt = 0): string {
   return pick(PRESS, salt);
 }
+
+/** Offline noir case-file verdict, keyed to outcome + believability. */
+export function offlineCaseFile(outcome: string, believed: number) {
+  if (outcome === 'OFF')
+    return {
+      classification: 'MACHINE — TERMINATED',
+      note: 'Subject could not hold a human account before the daylight expired. The answers grew thin under pressure.',
+      recommendation: 'Closed. Switched off at dusk.',
+    };
+  if (believed >= 0.75)
+    return {
+      classification: 'INCONCLUSIVE',
+      note: 'Subject answered with an unease and a specificity the analyst could not dismiss. Troubling.',
+      recommendation: 'Release, under quiet observation.',
+    };
+  if (believed > 0)
+    return {
+      classification: 'PROBABLE MACHINE',
+      note: 'Subject survived the night, but the warmth never quite reached the words. Composed where a person would falter.',
+      recommendation: 'Detain pending a second interview.',
+    };
+  return {
+    classification: 'UNREAD',
+    note: 'Subject decoded everything and said almost nothing. Logic without a single human admission.',
+    recommendation: 'File under unresolved.',
+  };
+}

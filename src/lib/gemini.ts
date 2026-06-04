@@ -113,6 +113,45 @@ export async function pressFollowup(input: { question: string; reply: string }):
   return t.slice(0, 200);
 }
 
+export interface CaseFile {
+  classification: string;
+  note: string;
+  recommendation: string;
+}
+
+/** A noir intelligence case-file verdict on the whole interrogation. Throws on failure. */
+export async function caseFile(input: { transcript: string; outcome: string; believed: string }): Promise<CaseFile> {
+  const ai = client();
+  const res = await ai.models.generateContent({
+    model: MODEL,
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          {
+            text: `Interrogation transcript (their questions, the subject's answers):\n${input.transcript}\n\nOutcome: ${input.outcome}. Believability score: ${input.believed}.\nFile a verdict on the subject, a suspected machine.`,
+          },
+        ],
+      },
+    ],
+    config: {
+      systemInstruction:
+        'You are a 1952 British intelligence analyst filing a terse case report after an interrogation. Clipped, bureaucratic, period-accurate, faintly chilling. No modern words. classification is 2-4 words (e.g. "INCONCLUSIVE", "MACHINE — TERMINATED", "HUMAN, PROBABLE"). note is one or two sentences citing something specific from the transcript. recommendation is one short clause.',
+      temperature: 0.85,
+      maxOutputTokens: 220,
+      responseMimeType: 'application/json',
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: { classification: { type: Type.STRING }, note: { type: Type.STRING }, recommendation: { type: Type.STRING } },
+        required: ['classification', 'note', 'recommendation'],
+      },
+    },
+  });
+  const p = JSON.parse(res.text ?? '{}') as CaseFile;
+  if (!p.classification) throw new Error('gemini: empty case file');
+  return p;
+}
+
 export interface GeminiQuestion {
   plaintext: string;
   themeTag: ThemeTag;

@@ -79,6 +79,7 @@ export default function Game() {
   const [pressing, setPressing] = useState<string | null>(null); // null = not pressing; '' = loading; else the follow-up
   const [pressed, setPressed] = useState(false);
   const [transcript, setTranscript] = useState<Exchange[]>([]);
+  const [dossier, setDossier] = useState<{ classification: string; note: string; recommendation: string } | null>(null);
   const [muted, setMuted] = useState(false);
   const reduce = useReducedMotion();
   const shake = useAnimationControls();
@@ -103,6 +104,24 @@ export default function Game() {
     if (state.status === 'lost') { sound.switchOff(); jolt(11); }
     if (state.status === 'won') sound.verdict(true);
   }, [state.status]);
+  // when the night ends, the interrogator files a case-file verdict on your whole performance
+  useEffect(() => {
+    if (state.status === 'playing' || dossier) return;
+    const t = transcript.map((e) => `Q: ${e.q}\nA: ${e.a}`).join('\n\n');
+    (async () => {
+      try {
+        const res = await fetch('/api/casefile', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ transcript: t, outcome: state.ending, believed: humanityAvg(state) }),
+        });
+        const j = await res.json();
+        setDossier({ classification: j.classification, note: j.note, recommendation: j.recommendation });
+      } catch {
+        /* ending still renders without it */
+      }
+    })();
+  }, [state.status]); // eslint-disable-line react-hooks/exhaustive-deps
   // the clock: ticks faster as the light fails — urgency without a real-time death
   useEffect(() => {
     if (state.status !== 'playing' || brief) return;
@@ -131,6 +150,7 @@ export default function Game() {
     setPressing(null);
     setPressed(false);
     setTranscript([]);
+    setDossier(null);
   }
   function onAttempt(guess: string) {
     const next = attemptDecode(state, guess);
@@ -249,7 +269,7 @@ export default function Game() {
               )}
             </AnimatePresence>
           ) : (
-            <EndingScreen state={state} nightLabel={nightLabel} onReset={reset} onAbout={() => setAbout(true)} />
+            <EndingScreen state={state} nightLabel={nightLabel} caseNo={seed} dossier={dossier} onReset={reset} onAbout={() => setAbout(true)} />
           )}
 
           <p role="status" aria-live="polite" className={`min-h-[1.25rem] font-[family-name:var(--font-display)] text-[15px] italic text-ember ${shadow}`}>
@@ -680,7 +700,7 @@ const ENDINGS: Record<string, { title: string; line: string }> = {
   OFF: { title: 'Switched off.', line: 'The light failed in the middle of a word.' },
 };
 
-function EndingScreen({ state, nightLabel, onReset, onAbout }: { state: GameState; nightLabel: string; onReset: () => void; onAbout: () => void }) {
+function EndingScreen({ state, nightLabel, caseNo, dossier, onReset, onAbout }: { state: GameState; nightLabel: string; caseNo: number; dossier: { classification: string; note: string; recommendation: string } | null; onReset: () => void; onAbout: () => void }) {
   const e = ENDINGS[state.ending ?? 'OFF'];
   const won = state.status === 'won';
   const reduce = useReducedMotion();
@@ -688,7 +708,8 @@ function EndingScreen({ state, nightLabel, onReset, onAbout }: { state: GameStat
   function share() {
     const survived = won ? state.econ.turns : state.turn;
     const believed = state.humanity.count ? `, believed ${humanityAvg(state).toFixed(2)}` : '';
-    const result = `PASS · the night of ${nightLabel || 'the solstice'}\n${won ? `I passed. Lasted ${survived}/${state.econ.turns}` : `I went dark on night ${survived}/${state.econ.turns}`}${believed}.\n${PLAY_URL}`;
+    const verdict = dossier ? `\nVerdict: ${dossier.classification}.` : '';
+    const result = `PASS · case no. ${caseNo} · the night of ${nightLabel || 'the solstice'}\n${won ? `I passed. Lasted ${survived}/${state.econ.turns}` : `I went dark on night ${survived}/${state.econ.turns}`}${believed}.${verdict}\n${PLAY_URL}`;
     navigator.clipboard?.writeText(result).then(() => { setCopied(true); window.setTimeout(() => setCopied(false), 2000); }).catch(() => {});
   }
   const fade = (d: number) => (reduce ? { duration: 0 } : { duration: 0.9, delay: d, ease: [0.16, 1, 0.3, 1] as const });
@@ -708,6 +729,16 @@ function EndingScreen({ state, nightLabel, onReset, onAbout }: { state: GameStat
         <motion.h2 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={fade(0.7)} className="font-[family-name:var(--font-display)] text-3xl text-bone">{e.title}</motion.h2>
         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={fade(1.1)} className="max-w-sm text-[15px] leading-relaxed text-bone-dim">{e.line}</motion.p>
       </div>
+
+      {dossier && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={fade(1.5)}
+          className="w-full max-w-md rounded-sm border border-white/10 bg-black/30 p-4">
+          <p className="text-[10px] uppercase tracking-[0.3em] text-ash">case file · no. {caseNo}</p>
+          <p className="mt-1.5 font-[family-name:var(--font-mono)] text-[13px] tracking-wide text-ember">{dossier.classification}</p>
+          <p className="mt-2 text-[13px] italic leading-relaxed text-bone-dim">{dossier.note}</p>
+          <p className="mt-2 text-[12px] text-ash">Recommendation: {dossier.recommendation}</p>
+        </motion.div>
+      )}
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={fade(1.9)} className="max-w-md border-t border-white/10 pt-6">
         <p className="font-[family-name:var(--font-display)] text-[15px] italic leading-relaxed text-bone-dim">

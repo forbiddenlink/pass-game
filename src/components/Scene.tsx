@@ -28,7 +28,7 @@ export default function Scene({
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 -z-0 overflow-hidden">
       {/* barred window — the hero. iron bars, a hard sun disc with bloom, bars shadowing in. */}
-      <div className="absolute right-[4%] top-[9%] h-[28vmin] w-[20vmin] overflow-hidden rounded-[2px] opacity-80 shadow-[0_0_70px_rgba(0,0,0,0.7)] sm:right-[5%] sm:top-[9%] sm:h-[42vmin] sm:w-[30vmin] sm:opacity-100"
+      <div className="absolute right-[4%] top-[15%] h-[26vmin] w-[18vmin] overflow-hidden rounded-[2px] opacity-75 shadow-[0_0_70px_rgba(0,0,0,0.7)] sm:right-[5%] sm:top-[9%] sm:h-[42vmin] sm:w-[30vmin] sm:opacity-100"
         style={{ background: `linear-gradient(${skyTop}, ${skyBot})`, boxShadow: '0 0 70px rgba(0,0,0,0.7), inset 0 0 26px rgba(0,0,0,0.55)' }}>
         {/* the sun, with bloom */}
         <div className="absolute left-1/2 -translate-x-1/2 rounded-full"
