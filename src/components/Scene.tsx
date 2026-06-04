@@ -10,6 +10,14 @@
  */
 const LAMP = '#f4b258'; // fixed warm — the last warmth, never desaturates
 
+// fixed scatter of dust motes for the lamplight (deterministic, no layout jank)
+const MOTES = [
+  { x: 18, y: 30, d: 9, delay: 0 }, { x: 34, y: 60, d: 11, delay: 2 }, { x: 47, y: 20, d: 8, delay: 1 },
+  { x: 58, y: 50, d: 12, delay: 3 }, { x: 70, y: 35, d: 10, delay: 0.5 }, { x: 26, y: 72, d: 13, delay: 4 },
+  { x: 52, y: 80, d: 9.5, delay: 2.5 }, { x: 64, y: 66, d: 11.5, delay: 1.5 }, { x: 40, y: 44, d: 10.5, delay: 3.5 },
+  { x: 78, y: 55, d: 12.5, delay: 5 }, { x: 30, y: 18, d: 8.5, delay: 6 }, { x: 60, y: 28, d: 9, delay: 4.5 },
+];
+
 export default function Scene({
   r, suspicion, skyTop, skyBot, sunCol,
 }: { r: number; suspicion: number; skyTop: string; skyBot: string; sunCol: string }) {
@@ -50,12 +58,24 @@ export default function Scene({
           }} />
       </div>
 
-      {/* the interrogator — a silhouette across the table, rim-lit by the lamp */}
-      <div className="absolute bottom-0 left-1/2 h-[24vmin] w-[64vmin] -translate-x-1/2">
+      {/* dust adrift in the lamplight */}
+      <div className="absolute left-1/2 top-[18vmin] h-[44vmin] w-[40vmin] -translate-x-1/2" style={{ opacity: lampGlow }}>
+        {MOTES.map((m, i) => (
+          <span key={i} className="mote absolute h-[3px] w-[3px] rounded-full"
+            style={{ left: `${m.x}%`, top: `${m.y}%`, background: LAMP, animationDuration: `${m.d}s`, animationDelay: `${m.delay}s` }} />
+        ))}
+      </div>
+
+      {/* the interrogator — a fedora silhouette across the table, rim-lit by the lamp */}
+      <div className="absolute bottom-0 left-1/2 h-[28vmin] w-[64vmin] -translate-x-1/2">
         <div className="absolute bottom-0 left-1/2 h-[13vmin] w-[46vmin] -translate-x-1/2 rounded-t-[48%] bg-[#030208]"
-          style={{ boxShadow: `inset 0 2px 0 0 color-mix(in oklab, ${LAMP} 32%, transparent)` }} />
+          style={{ boxShadow: `inset 0 2px 0 0 color-mix(in oklab, ${LAMP} 30%, transparent)` }} />
         <div className="absolute bottom-[10vmin] left-1/2 h-[11vmin] w-[11vmin] -translate-x-1/2 rounded-full bg-[#030208]"
-          style={{ boxShadow: `inset 0 2px 0 0 color-mix(in oklab, ${LAMP} 38%, transparent)` }} />
+          style={{ boxShadow: `inset 0 2px 0 0 color-mix(in oklab, ${LAMP} 36%, transparent)` }} />
+        {/* fedora: brim + crown */}
+        <div className="absolute bottom-[18.5vmin] left-1/2 h-[2.4vmin] w-[19vmin] -translate-x-1/2 rounded-[50%] bg-[#020106]"
+          style={{ boxShadow: `inset 0 2px 0 0 color-mix(in oklab, ${LAMP} 30%, transparent)` }} />
+        <div className="absolute bottom-[19.5vmin] left-1/2 h-[4.6vmin] w-[10vmin] -translate-x-1/2 rounded-t-[42%] bg-[#020106]" />
       </div>
 
       {/* vignette */}

@@ -54,12 +54,19 @@ body {
   0% { transform: translate(0, 0); }
   100% { transform: translate(-3%, -2%); }
 }
+@keyframes mote {
+  0% { transform: translate(0, 0); opacity: 0; }
+  12% { opacity: 0.55; }
+  88% { opacity: 0.35; }
+  100% { transform: translate(10px, -46px); opacity: 0; }
+}
 .lamp-sway { animation: lamp-sway 7s ease-in-out infinite; transform-origin: top center; }
 .lamp-flicker { animation: lamp-flicker 5s linear infinite; }
 .grain { animation: grain-drift 8s steps(6) infinite alternate; }
+.mote { animation: mote linear infinite; }
 
 @media (prefers-reduced-motion: reduce) {
-  .lamp-sway, .lamp-flicker, .grain { animation: none !important; }
+  .lamp-sway, .lamp-flicker, .grain, .mote { animation: none !important; }
   *,
   *::before,
   *::after {
