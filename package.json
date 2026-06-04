@@ -1,0 +1,8 @@
+{
+  "name": "pass-game",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prototype": "node prototype/night-loop.prototype.mjs"
+  }
+}
