@@ -28,22 +28,29 @@ export default function Scene({
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 -z-0 overflow-hidden">
       {/* barred window — the hero. iron bars, a hard sun disc with bloom, bars shadowing in. */}
-      <div className="absolute right-[5%] top-[14%] h-[40vmin] w-[28vmin] overflow-hidden rounded-[2px] shadow-[0_0_70px_rgba(0,0,0,0.7)] sm:top-[9%] sm:h-[42vmin] sm:w-[30vmin]"
-        style={{ background: `linear-gradient(${skyTop}, ${skyBot})` }}>
+      <div className="absolute right-[4%] top-[9%] h-[28vmin] w-[20vmin] overflow-hidden rounded-[2px] opacity-80 shadow-[0_0_70px_rgba(0,0,0,0.7)] sm:right-[5%] sm:top-[9%] sm:h-[42vmin] sm:w-[30vmin] sm:opacity-100"
+        style={{ background: `linear-gradient(${skyTop}, ${skyBot})`, boxShadow: '0 0 70px rgba(0,0,0,0.7), inset 0 0 26px rgba(0,0,0,0.55)' }}>
+        {/* the sun, with bloom */}
         <div className="absolute left-1/2 -translate-x-1/2 rounded-full"
           style={{
             top: `${(1 - r) * 56 + 8}%`,
             height: '13vmin', width: '13vmin',
-            background: `radial-gradient(circle, #fff2cf 0%, ${sunCol} 38%, ${skyBot} 64%, transparent 72%)`,
-            boxShadow: `0 0 9vmin 2vmin ${sunCol}`,
+            background: `radial-gradient(circle, #fff6e0 0%, #fff2cf 22%, ${sunCol} 42%, ${skyBot} 66%, transparent 74%)`,
+            boxShadow: `0 0 11vmin 3vmin ${sunCol}`,
             opacity: Math.max(0, Math.min(1, r * 1.4)),
           }} />
-        {/* iron bars + their cast shadow */}
-        {[28, 50, 72].map((x) => (
-          <div key={x} className="absolute inset-y-0" style={{ left: `${x}%`, width: '3px', background: '#05040a', boxShadow: '3px 0 8px rgba(0,0,0,0.5)' }} />
+        {/* haze band on the horizon */}
+        <div className="absolute inset-x-0" style={{ top: `${(1 - r) * 56 + 12}%`, height: '6vmin', background: `linear-gradient(transparent, color-mix(in oklab, ${sunCol} 55%, ${skyBot}), transparent)`, opacity: Math.max(0, Math.min(0.6, r)) }} />
+        {/* glass: a faint diagonal reflection */}
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(122deg, transparent 42%, rgba(255,240,210,0.07) 50%, transparent 58%)' }} />
+        {/* iron bars, rail-lit on one edge + cast shadow */}
+        {[25, 50, 75].map((x) => (
+          <div key={x} className="absolute inset-y-0" style={{ left: `${x}%`, width: '4px', background: 'linear-gradient(90deg,#0a0810,#05040a)', boxShadow: `inset 1px 0 0 color-mix(in oklab, ${LAMP} 22%, transparent), 4px 0 9px rgba(0,0,0,0.5)` }} />
         ))}
-        <div className="absolute inset-x-0 top-1/2 h-[3px] bg-[#05040a]" />
-        <div className="absolute inset-0 ring-[3px] ring-[#0a0810]" />
+        <div className="absolute inset-x-0 top-1/2 h-[4px]" style={{ background: '#05040a', boxShadow: `inset 0 1px 0 color-mix(in oklab, ${LAMP} 20%, transparent)` }} />
+        {/* sill + frame */}
+        <div className="absolute inset-x-0 bottom-0 h-[2.4vmin] bg-[#06040a] shadow-[0_-2px_8px_rgba(0,0,0,0.6)]" />
+        <div className="absolute inset-0 rounded-[2px] ring-[4px] ring-[#0a0810]" style={{ boxShadow: 'inset 0 0 20px rgba(0,0,0,0.55)' }} />
       </div>
 
       {/* desk lamp — sways, flickers, pools warm light below */}
@@ -57,6 +64,9 @@ export default function Scene({
             clipPath: 'polygon(46% 0%, 54% 0%, 100% 100%, 0% 100%)',
           }} />
       </div>
+
+      {/* the desk: a warm lit surface under the lamp so the page rests in the room, not in a void */}
+      <div className="absolute inset-x-0 bottom-0 h-[46vmin]" style={{ opacity: lampGlow, background: `radial-gradient(ellipse 75% 100% at 50% 100%, color-mix(in oklab, ${LAMP} 13%, transparent) 0%, transparent 68%)` }} />
 
       {/* dust adrift in the lamplight */}
       <div className="absolute left-1/2 top-[18vmin] h-[44vmin] w-[40vmin] -translate-x-1/2" style={{ opacity: lampGlow }}>

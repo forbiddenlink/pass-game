@@ -51,31 +51,28 @@ describe('buildPuzzle — every generated puzzle is solvable', () => {
 describe('cadence (interleaved so no long same-cipher run)', () => {
   const P = (turn: number): Puzzle => buildPuzzle({ seed: 1, turn, suspicion: 0.2 });
 
-  it('turns 1-2 are caesar', () => {
+  it('night 1 teaches the rotor (caesar), night 2 the grid (substitution)', () => {
     expect(P(1).cipher.type).toBe('caesar');
-    expect(P(2).cipher.type).toBe('caesar');
+    expect(P(2).cipher.type).toBe('substitution');
   });
 
-  it('turns 3-4 are substitution', () => {
-    expect(P(3).cipher.type).toBe('substitution');
-    expect(P(4).cipher.type).toBe('substitution');
-  });
-
-  it('turn 5 is a caesar breather between substitution runs', () => {
-    expect(P(5).cipher.type).toBe('caesar');
+  it('the cipher type varies every night (no two-in-a-row of the same)', () => {
+    for (let t = 1; t < 8; t++) {
+      expect(P(t).cipher.type).not.toBe(P(t + 1).cipher.type);
+    }
   });
 
   it('every substitution turn carries pre-revealed letters (cuts the grind)', () => {
-    expect(P(3).prefilled.length).toBeGreaterThan(0);
-    expect(P(6).prefilled.length).toBeGreaterThan(0);
+    expect(P(2).prefilled.length).toBeGreaterThan(0);
+    expect(P(4).prefilled.length).toBeGreaterThan(0);
   });
 
-  it('turn 8 is the climactic vigenere', () => {
+  it('night 8 is the climactic vigenere', () => {
     expect(P(8).cipher.type).toBe('vigenere');
   });
 
   it('caesar turns have no prefilled help', () => {
     expect(P(1).prefilled.length).toBe(0);
-    expect(P(5).prefilled.length).toBe(0);
+    expect(P(3).prefilled.length).toBe(0);
   });
 });

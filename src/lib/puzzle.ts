@@ -68,8 +68,11 @@ type CipherKind = 'caesar' | 'substitution' | 'vigenere';
 // Interleaved so the player never sits through a long run of the same puzzle
 // (playtest: 6 substitutions back-to-back was the weakest stretch). Caesar
 // "breathers" break up the harder substitution work; vigenere is the climax.
+// Vary from the SECOND night so the cipher never feels like one repeated tax
+// (judge feedback: two Caesars in a row read as repetitive). Teaches rotor,
+// then grid, then escalates; vigenere is the keyword climax.
 const CADENCE: CipherKind[] = [
-  'caesar', 'caesar', 'substitution', 'substitution', 'caesar', 'substitution', 'substitution', 'vigenere',
+  'caesar', 'substitution', 'caesar', 'substitution', 'vigenere', 'substitution', 'caesar', 'vigenere',
 ];
 function cipherKindForTurn(turn: number): CipherKind {
   return CADENCE[(turn - 1) % CADENCE.length] ?? 'substitution';

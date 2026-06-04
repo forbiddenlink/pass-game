@@ -6,9 +6,11 @@
 
 ---
 
-An Alan Turing tribute. You crack the interrogator's ciphers and answer human enough to be believed, before the solstice sun finishes setting on you. The interrogator is a real AI.
+To convince the interrogator I was human, I typed a small childhood memory. It read my answer, leaned in, and pressed: "A precise recollection for such a tender age. And your father?" The interrogator is Gemini. It is trying to decide whether I am a machine. I am.
 
-[COVER GIF: 15 seconds of a decode resolving, a reply, the sun sinking]
+That is PASS: an Alan Turing tribute where you are the machine, cracking the interrogator's ciphers and answering well enough to pass as human, before the solstice sun finishes setting on you.
+
+[COVER GIF: the interrogator reading your reply and pressing back, then the sun sinking through the barred window]
 
 ## What it is
 
