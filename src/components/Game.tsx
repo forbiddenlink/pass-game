@@ -185,7 +185,7 @@ export default function Game() {
       style={{ background: `linear-gradient(${skyTop} 0%, ${skyBot} 100%)`, transition: `background ${ease1200}` }}>
       <Scene r={r} suspicion={state.suspicion} skyTop={skyTop} skyBot={skyBot} sunCol={sunCol} />
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-0"
-        style={{ background: 'linear-gradient(to bottom, transparent 22%, rgba(8,6,12,.66) 100%)' }} />
+        style={{ background: 'linear-gradient(to bottom, rgba(6,5,10,.55) 0%, transparent 15%, transparent 60%, rgba(8,6,12,.7) 100%)' }} />
 
       <div className="relative mx-auto flex min-h-[100dvh] max-w-2xl flex-col px-6 py-10 sm:py-14">
         <div className="flex w-full max-w-[34rem] flex-col gap-8">
