@@ -58,6 +58,7 @@ type Verdict = { line: string; tell: string; good: boolean; humanScore: number; 
 type Exchange = { q: string; a: string; line: string; press: boolean };
 
 const PLAY_URL = 'pass-game-elizabeth-emersons-projects.vercel.app';
+const SAVE_KEY = 'pass:save:v1';
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 function dailySeed() {
   const d = new Date();
@@ -132,6 +133,34 @@ export default function Game() {
   }, [r, state.status, brief]);
 
   const lowLight = r < 0.28;
+
+  // resume today's in-progress night across a reload (the biggest "lost progress" risk)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return;
+      const s = JSON.parse(raw);
+      if (s && s.seed === dailySeed() && s.state?.status === 'playing') {
+        setSeed(s.seed);
+        setState(s.state);
+        setTranscript(s.transcript ?? []);
+        setDossier(s.dossier ?? null);
+        setNightLabel(s.nightLabel ?? nightLabelFor());
+        setBrief(false);
+      }
+    } catch {
+      /* no save, or unreadable — start fresh */
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // persist the night as it unfolds
+  useEffect(() => {
+    if (brief) return;
+    try {
+      localStorage.setItem(SAVE_KEY, JSON.stringify({ seed, state, transcript, dossier, nightLabel }));
+    } catch {
+      /* storage full / unavailable — non-fatal */
+    }
+  }, [state, transcript, dossier, brief, seed, nightLabel]);
 
   function begin() {
     const s = dailySeed();

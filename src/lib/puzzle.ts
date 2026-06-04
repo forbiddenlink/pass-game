@@ -63,8 +63,15 @@ function rng(seed: number) {
 const hash = (seed: number, turn: number) => (seed * 73856093) ^ (turn * 19349663);
 
 export function pickQuestion(seed: number, turn: number) {
-  const r = rng(hash(seed, turn) >>> 0);
-  return QUESTIONS[Math.floor(r() * QUESTIONS.length)];
+  // shuffle the question indices by seed, then walk them by turn — so no two
+  // nights in a run draw the same question (was: independent picks => collisions)
+  const idxs = QUESTIONS.map((_, i) => i);
+  const r = rng((seed >>> 0) || 1);
+  for (let i = idxs.length - 1; i > 0; i--) {
+    const j = Math.floor(r() * (i + 1));
+    [idxs[i], idxs[j]] = [idxs[j], idxs[i]];
+  }
+  return QUESTIONS[idxs[(turn - 1) % QUESTIONS.length]];
 }
 
 type CipherKind = 'caesar' | 'substitution' | 'vigenere';
