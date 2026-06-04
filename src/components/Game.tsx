@@ -148,7 +148,7 @@ export default function Game() {
           {state.status === 'playing' ? (
             <AnimatePresence mode="wait">
               {verdict ? (
-                <Panel key="v" reduce={!!reduce}>
+                <Panel key={`v${state.turn}${verdict.skip ? 's' : ''}`} reduce={!!reduce}>
                   <VerdictBeat verdict={verdict} onContinue={resolveVerdict} last={state.turn >= state.econ.turns && !verdict.skip} />
                 </Panel>
               ) : state.phase === 'decoding' ? (
@@ -340,7 +340,7 @@ function CaesarDial({ puzzle, hintUsed, onAttempt }: { puzzle: Puzzle; hintUsed:
       {hintUsed && <p className="text-[11px] uppercase tracking-widest text-ember">the rotor rests at {answer}</p>}
       <label className="flex min-h-[44px] items-center gap-4 text-[11px] uppercase tracking-widest text-ash">
         <span className="tabular-nums">rotor {shift}</span>
-        <input type="range" min={0} max={25} value={shift}
+        <input id="rotor" name="rotor" type="range" min={0} max={25} value={shift}
           onChange={(e) => { setShift(Number(e.target.value)); sound.key(); }}
           aria-label="cipher rotor" aria-valuetext={`rotor at ${shift} of 25`}
           className="h-6 flex-1 cursor-pointer accent-ember" />
@@ -435,7 +435,7 @@ function TypedDecode({ puzzle, hintUsed, onAttempt }: { puzzle: Puzzle; hintUsed
         <p className="text-[11px] uppercase tracking-widest text-ash">the key, at last. <span className="font-[family-name:var(--font-mono)] text-ember">{puzzle.revealedKey}</span></p>
       )}
       {hintUsed && <p className="text-[11px] uppercase tracking-widest text-ember">it opens: “{opening}…”</p>}
-      <input value={val} onChange={(e) => setVal(e.target.value)} aria-label="your decoding" placeholder="set down the line they spoke…"
+      <input id="decode" name="decode" value={val} onChange={(e) => setVal(e.target.value)} aria-label="your decoding" placeholder="set down the line they spoke…"
         className="min-h-[44px] rounded-sm bg-black/40 px-4 py-3 font-[family-name:var(--font-display)] text-lg text-bone outline-none ring-1 ring-white/10 placeholder:text-ash/60" />
       <Submit onClick={() => onAttempt(val)} ready={looksEnglish(val)} />
     </div>
@@ -449,7 +449,7 @@ function ReplyPanel({ question, judging, onReply, onSkip }: { question: string; 
       <Label>decoded · they ask</Label>
       <Typewriter text={`“${question}?”`} className="font-[family-name:var(--font-display)] text-2xl italic leading-snug text-bone" />
       <p className="text-[12px] text-bone-dim">Answer as a person to be believed (it costs light), or stay silent and keep what you have.</p>
-      <textarea value={val} onChange={(e) => setVal(e.target.value)} disabled={judging} rows={2} aria-label="your reply"
+      <textarea id="reply" name="reply" value={val} onChange={(e) => setVal(e.target.value)} disabled={judging} rows={2} aria-label="your reply"
         placeholder="say something a person would say…"
         className="resize-none rounded-sm bg-black/40 px-4 py-3 text-[15px] text-bone outline-none ring-1 ring-white/10 placeholder:text-ash/60 disabled:opacity-50" />
       <div className="flex items-center gap-5">
