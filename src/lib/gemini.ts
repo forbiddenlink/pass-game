@@ -91,6 +91,28 @@ Judge how human the reply reads.`,
   return parsed;
 }
 
+/** A probing follow-up that references the subject's weak reply. Throws on failure. */
+export async function pressFollowup(input: { question: string; reply: string }): Promise<string> {
+  const ai = client();
+  const res = await ai.models.generateContent({
+    model: MODEL,
+    contents: [
+      {
+        role: 'user',
+        parts: [
+          {
+            text: `You asked: "${input.question}". The subject answered: "${input.reply}". That answer rings false / machine-like. Press them with ONE short follow-up (max 18 words) that challenges their specific answer and demands they sound human. In character, 1952 interrogator. Plain sentence, no quotes.`,
+          },
+        ],
+      },
+    ],
+    config: { systemInstruction: JUDGE_SYSTEM, temperature: 0.8, maxOutputTokens: 60 },
+  });
+  const t = (res.text ?? '').trim();
+  if (!t) throw new Error('gemini: empty follow-up');
+  return t.slice(0, 200);
+}
+
 export interface GeminiQuestion {
   plaintext: string;
   themeTag: ThemeTag;

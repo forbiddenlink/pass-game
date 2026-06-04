@@ -37,3 +37,15 @@ export function interrogatorLine(score: number, salt = 0): string {
   if (score >= 0.45) return pick(MID, salt);
   return pick(LOW, salt);
 }
+
+const PRESS = [
+  'No. That was rehearsed. Tell me again, and mean it this time.',
+  'A person would not put it like that. Try once more.',
+  'You are performing for me. Drop it. Answer plainly.',
+  'I do not believe you. Say something only you could say.',
+  'Slower. Tell me what it actually felt like.',
+];
+/** The interrogator's offline follow-up when a reply rings false. */
+export function pressLine(salt = 0): string {
+  return pick(PRESS, salt);
+}

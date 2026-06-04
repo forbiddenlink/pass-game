@@ -6,14 +6,15 @@ import {
   createGame,
   attemptDecode,
   useHint,
-  submitReply,
+  recordReply,
+  advance,
   skipReply,
   humanityAvg,
   type GameState,
 } from '@/lib/game';
 import { decode } from '@/lib/cipher';
 import { scoreReply } from '@/lib/score';
-import { interrogatorLine } from '@/lib/lines';
+import { interrogatorLine, pressLine } from '@/lib/lines';
 import { sound } from '@/lib/sound';
 import Scene from '@/components/Scene';
 import type { Puzzle } from '@/lib/puzzle';
@@ -50,7 +51,8 @@ const HINT_LABEL: Record<string, string> = {
 };
 const shadow = '[text-shadow:0_1px_4px_rgba(8,6,12,0.92)]';
 
-type Verdict = { line: string; tell: string; good: boolean; humanScore: number; skip: boolean };
+type Verdict = { line: string; tell: string; good: boolean; humanScore: number; skip: boolean; question: string; replyText: string };
+type Exchange = { q: string; a: string; line: string; press: boolean };
 
 export default function Game() {
   const [seed] = useState(() => 1);
@@ -59,6 +61,9 @@ export default function Game() {
   const [message, setMessage] = useState('');
   const [brief, setBrief] = useState(true);
   const [verdict, setVerdict] = useState<Verdict | null>(null);
+  const [pressing, setPressing] = useState<string | null>(null); // null = not pressing; '' = loading; else the follow-up
+  const [pressed, setPressed] = useState(false);
+  const [transcript, setTranscript] = useState<Exchange[]>([]);
   const [muted, setMuted] = useState(false);
   const reduce = useReducedMotion();
 
@@ -92,6 +97,9 @@ export default function Game() {
     setState(createGame({ seed }));
     setMessage('');
     setVerdict(null);
+    setPressing(null);
+    setPressed(false);
+    setTranscript([]);
   }
   function onAttempt(guess: string) {
     const next = attemptDecode(state, guess);
@@ -103,13 +111,14 @@ export default function Game() {
     setState(next);
   }
   async function onReply(text: string) {
+    const q = pressing ?? state.puzzle.plaintext;
     setJudging(true);
     let humanScore: number, tell: string, line: string;
     try {
       const res = await fetch('/api/judge', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ question: state.puzzle.plaintext, reply: text }),
+        body: JSON.stringify({ question: q, reply: text }),
       });
       const j = await res.json();
       humanScore = j.humanScore;
@@ -124,18 +133,50 @@ export default function Game() {
     setJudging(false);
     const good = humanScore >= 0.45;
     sound.verdict(good);
-    setVerdict({ line, tell, good, humanScore, skip: false });
+    setVerdict({ line, tell, good, humanScore, skip: false, question: q, replyText: text });
   }
   function onSkip() {
     sound.verdict(false);
-    setVerdict({ line: interrogatorLine(0, state.turn), tell: '', good: false, humanScore: 0, skip: true });
+    setVerdict({ line: interrogatorLine(0, state.turn), tell: '', good: false, humanScore: 0, skip: true, question: pressing ?? state.puzzle.plaintext, replyText: '' });
   }
-  function resolveVerdict() {
+  async function resolveVerdict() {
     if (!verdict) return;
+    const v = verdict;
+    const wasPress = pressing !== null;
     sound.tick();
-    setState((s) => (verdict.skip ? skipReply(s) : submitReply(s, verdict.humanScore)));
-    setMessage('');
     setVerdict(null);
+    setMessage('');
+    setTranscript((t) => [...t, { q: v.question, a: v.skip ? '— silence —' : v.replyText, line: v.line, press: wasPress }]);
+
+    const next = v.skip ? skipReply(state) : recordReply(state, v.humanScore);
+    if (next.status !== 'playing') {
+      setState(next);
+      setPressing(null);
+      setPressed(false);
+      return;
+    }
+    // a suspicious spoken answer earns ONE sharper follow-up — the interrogation presses
+    if (!v.skip && !pressed && v.humanScore < 0.4) {
+      setState(next); // light + humanity recorded, phase still 'replying'
+      setPressed(true);
+      setPressing(''); // loading sentinel -> press panel shows "they lean in close…"
+      try {
+        const res = await fetch('/api/press', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ question: v.question, reply: v.replyText }),
+        });
+        const j = await res.json();
+        setPressing(j.followup || pressLine(v.replyText.length));
+      } catch {
+        setPressing(pressLine(v.replyText.length));
+      }
+      return;
+    }
+    // otherwise the night moves on
+    setState(advance(next));
+    setPressing(null);
+    setPressed(false);
   }
 
   return (
@@ -149,19 +190,28 @@ export default function Game() {
         <div className="flex w-full max-w-[34rem] flex-col gap-8">
           <Header state={state} r={r} muted={muted} lowLight={lowLight} onHelp={() => setBrief(true)} onMute={() => setMuted(sound.toggleMute())} />
 
+          {state.status === 'playing' && transcript.length > 0 && <Transcript items={transcript} />}
+
           {state.status === 'playing' ? (
             <AnimatePresence mode="wait">
               {verdict ? (
-                <Panel key={`v${state.turn}${verdict.skip ? 's' : ''}`} reduce={!!reduce}>
-                  <VerdictBeat verdict={verdict} onContinue={resolveVerdict} last={state.turn >= state.econ.turns && !verdict.skip} />
+                <Panel key={`v${transcript.length}`} reduce={!!reduce}>
+                  <VerdictBeat verdict={verdict} onContinue={resolveVerdict} last={state.turn >= state.econ.turns && !verdict.skip && (pressing !== null || verdict.humanScore >= 0.4)} />
                 </Panel>
               ) : state.phase === 'decoding' ? (
                 <Panel key={`d${state.turn}`} reduce={!!reduce}>
                   <DecodePanel puzzle={state.puzzle} hintUsed={state.hintUsed} onAttempt={onAttempt} onHint={() => { sound.key(); setState(useHint(state)); }} />
                 </Panel>
               ) : (
-                <Panel key={`r${state.turn}`} reduce={!!reduce}>
-                  <ReplyPanel question={state.puzzle.plaintext} judging={judging} onReply={onReply} onSkip={onSkip} />
+                <Panel key={pressing !== null ? `p${transcript.length}` : `r${state.turn}`} reduce={!!reduce}>
+                  <ReplyPanel
+                    question={pressing !== null ? pressing : state.puzzle.plaintext}
+                    pressing={pressing !== null}
+                    loading={pressing === ''}
+                    judging={judging}
+                    onReply={onReply}
+                    onSkip={onSkip}
+                  />
                 </Panel>
               )}
             </AnimatePresence>
@@ -334,6 +384,22 @@ function Header({ state, r, muted, lowLight, onHelp, onMute }: { state: GameStat
   );
 }
 
+function Transcript({ items }: { items: Exchange[] }) {
+  const recent = items.slice(-4);
+  return (
+    <div className="flex max-h-[28vh] flex-col gap-3 overflow-y-auto pr-1 [mask-image:linear-gradient(to_bottom,transparent,black_14%)]">
+      <p className="text-[10px] uppercase tracking-[0.3em] text-ash">the record</p>
+      {recent.map((e, i) => (
+        <div key={i} className="flex flex-col gap-0.5 opacity-75">
+          <p className="font-[family-name:var(--font-display)] text-[15px] italic leading-snug text-bone-dim">“{e.q}{e.press ? '' : '?'}”</p>
+          <p className="text-[13px] text-bone-dim/70">{e.a === '— silence —' ? <span className="italic text-ash">— silence —</span> : `“${e.a}”`}</p>
+          <p className="text-[12px] italic text-ember/70">{e.line}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function VerdictBeat({ verdict, onContinue, last }: { verdict: Verdict; onContinue: () => void; last: boolean }) {
   return (
     <>
@@ -497,13 +563,25 @@ function TypedDecode({ puzzle, hintUsed, onAttempt }: { puzzle: Puzzle; hintUsed
   );
 }
 
-function ReplyPanel({ question, judging, onReply, onSkip }: { question: string; judging: boolean; onReply: (t: string) => void; onSkip: () => void }) {
+function ReplyPanel({ question, pressing = false, loading = false, judging, onReply, onSkip }: { question: string; pressing?: boolean; loading?: boolean; judging: boolean; onReply: (t: string) => void; onSkip: () => void }) {
   const [val, setVal] = useState('');
+  if (loading) {
+    return (
+      <>
+        <Label>they lean in close</Label>
+        <p className="font-[family-name:var(--font-display)] text-xl italic text-bone-dim">…</p>
+      </>
+    );
+  }
   return (
     <>
-      <Label>decoded · they ask</Label>
-      <DecryptText text={`“${question}?”`} className="font-[family-name:var(--font-display)] text-2xl italic leading-snug text-bone" />
-      <p className="text-[12px] text-bone-dim">Answer as a person to be believed (it costs light), or stay silent and keep what you have.</p>
+      <Label>{pressing ? 'they press' : 'decoded · they ask'}</Label>
+      {pressing ? (
+        <Typewriter text={`“${question}”`} className="font-[family-name:var(--font-display)] text-2xl italic leading-snug text-ember" />
+      ) : (
+        <DecryptText text={`“${question}?”`} className="font-[family-name:var(--font-display)] text-2xl italic leading-snug text-bone" />
+      )}
+      <p className="text-[12px] text-bone-dim">{pressing ? 'They did not buy it. Answer again, truer this time. It costs light.' : 'Answer as a person to be believed (it costs light), or stay silent and keep what you have.'}</p>
       <textarea id="reply" name="reply" value={val} onChange={(e) => setVal(e.target.value)} disabled={judging} rows={2} aria-label="your reply"
         placeholder="say something a person would say…"
         className="resize-none rounded-sm bg-black/40 px-4 py-3 text-[15px] text-bone outline-none ring-1 ring-white/10 placeholder:text-ash/60 disabled:opacity-50" />

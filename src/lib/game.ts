@@ -93,17 +93,27 @@ export function useHint(s: GameState): GameState {
   return next.status !== 'playing' ? next : { ...next, hintUsed: true };
 }
 
-export function submitReply(s: GameState, humanScore: number): GameState {
+/** Record a reply's cost + score WITHOUT advancing the turn (stays in 'replying'
+ *  so the interrogator can press a follow-up). */
+export function recordReply(s: GameState, humanScore: number): GameState {
   if (s.phase !== 'replying' || s.status !== 'playing') return s;
   const next = spend(s, s.econ.reply);
   if (next.status !== 'playing') return next; // switched off mid-sentence
   const score = clamp01(humanScore);
   const suspicion = clamp01(s.suspicion + (score < SUSPICION_HUMAN_OK ? 0.2 : -0.05));
-  return advanceTurn({
-    ...next,
-    suspicion,
-    humanity: { total: s.humanity.total + score, count: s.humanity.count + 1 },
-  });
+  return { ...next, suspicion, humanity: { total: s.humanity.total + score, count: s.humanity.count + 1 } };
+}
+
+/** Move on to the next question (or finish). Safe to call from 'replying'. */
+export function advance(s: GameState): GameState {
+  if (s.status !== 'playing') return s;
+  return advanceTurn(s);
+}
+
+/** Record a reply and immediately advance — the common case (no press). */
+export function submitReply(s: GameState, humanScore: number): GameState {
+  const r = recordReply(s, humanScore);
+  return r.phase === 'replying' && r.status === 'playing' ? advance(r) : r;
 }
 
 export function skipReply(s: GameState): GameState {
