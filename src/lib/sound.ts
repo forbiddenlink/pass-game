@@ -65,6 +65,9 @@ export const sound = {
   tick() {
     blip(1400, 0.02, 0.05, 'square');
   },
+  clock() {
+    blip(1700, 0.003, 0.022, 'sine'); // a faint, dry tick — the night moving
+  },
   key() {
     blip(900, 0.015, 0.04, 'square');
   },

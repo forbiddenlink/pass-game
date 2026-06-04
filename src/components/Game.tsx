@@ -73,6 +73,15 @@ export default function Game() {
     if (state.status === 'lost') sound.switchOff();
     if (state.status === 'won') sound.verdict(true);
   }, [state.status]);
+  // the clock: ticks faster as the light fails — urgency without a real-time death
+  useEffect(() => {
+    if (state.status !== 'playing' || brief) return;
+    const period = 360 + r * 1500;
+    const id = window.setInterval(() => sound.clock(), period);
+    return () => window.clearInterval(id);
+  }, [r, state.status, brief]);
+
+  const lowLight = r < 0.28;
 
   function begin() {
     sound.init();
@@ -138,7 +147,7 @@ export default function Game() {
 
       <div className="relative mx-auto flex min-h-[100dvh] max-w-2xl flex-col px-6 py-10 sm:py-14">
         <div className="flex w-full max-w-[34rem] flex-col gap-8">
-          <Header state={state} r={r} muted={muted} onHelp={() => setBrief(true)} onMute={() => setMuted(sound.toggleMute())} />
+          <Header state={state} r={r} muted={muted} lowLight={lowLight} onHelp={() => setBrief(true)} onMute={() => setMuted(sound.toggleMute())} />
 
           {state.status === 'playing' ? (
             <AnimatePresence mode="wait">
@@ -220,35 +229,62 @@ function DecryptText({ text, className }: { text: string; className?: string }) 
 }
 
 function Brief({ onBegin }: { onBegin: () => void }) {
+  const [showHow, setShowHow] = useState(false);
+  const reduce = useReducedMotion();
+  const story = [
+    'Manchester. The longest day, 1952.',
+    'They have brought you in to decide what you are.',
+    'When the sun sets, they will give their answer.',
+  ];
+  const at = (d: number) => (reduce ? { duration: 0 } : { duration: 0.9, delay: d, ease: [0.16, 1, 0.3, 1] as const });
   const steps = [
-    { k: 'Decode', t: 'Every question arrives enciphered. Crack it before the sun sets. Wrong guesses cost daylight.' },
-    { k: 'Answer', t: 'You may reply as a human, to be believed. Answering also costs daylight. Silence is safe, but hollow.' },
-    { k: 'Survive', t: 'Daylight is your life. Last until dawn and you pass the night. Run out, and you go dark.' },
+    ['Decode', 'Each question arrives enciphered. Crack it before the sun sets. Wrong guesses cost daylight.'],
+    ['Answer', 'Reply as a person to be believed. It also costs daylight. Silence is safe, but hollow.'],
+    ['Survive', 'Daylight is your life. Last until dawn and you pass. Run out, and you go dark.'],
   ];
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="absolute inset-0 z-20 flex items-center justify-center bg-[rgba(6,5,10,0.9)] px-6 backdrop-blur-sm"
-      role="dialog" aria-modal="true" aria-label="how to play">
-      <div className="flex w-full max-w-md flex-col gap-7">
-        <div className="flex flex-col gap-3">
-          <h1 className="font-[family-name:var(--font-display)] text-4xl font-semibold tracking-[0.3em] text-bone">PASS</h1>
-          <p className="font-[family-name:var(--font-display)] text-[17px] italic leading-relaxed text-bone-dim">
-            You are a machine. Tonight you are questioned. If they decide what you are, you are switched off at first light. Answer well. Pass as one of them.
-          </p>
-        </div>
-        <ol className="flex flex-col gap-3">
-          {steps.map((s, i) => (
-            <li key={s.k} className="flex gap-3">
-              <span className="font-[family-name:var(--font-mono)] text-xs text-ember">{i + 1}</span>
-              <p className="text-[14px] leading-relaxed text-bone-dim">
-                <span className="font-medium uppercase tracking-widest text-bone">{s.k}.</span> {s.t}
-              </p>
-            </li>
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.6 }}
+      className="absolute inset-0 z-20 flex items-center justify-center bg-[#040308] px-6"
+      role="dialog" aria-modal="true" aria-label="the night begins">
+      {/* a single warm light overhead */}
+      <div aria-hidden className="lamp-flicker pointer-events-none absolute left-1/2 top-0 h-[40vmin] w-[60vmin] -translate-x-1/2"
+        style={{ background: 'radial-gradient(ellipse 50% 80% at 50% 0%, color-mix(in oklab, #f4b258 40%, transparent), transparent 70%)' }} />
+      <div className="relative flex w-full max-w-md flex-col gap-8">
+        <div className="flex flex-col gap-4">
+          {story.map((line, i) => (
+            <motion.p key={line} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={at(0.3 + i * 1.1)}
+              className="font-[family-name:var(--font-display)] text-[19px] italic leading-relaxed text-bone">
+              {line}
+            </motion.p>
           ))}
-        </ol>
-        <button onClick={onBegin} className="inline-flex min-h-[44px] items-center justify-center self-start rounded-sm bg-ember px-7 font-[family-name:var(--font-sans)] text-sm font-medium text-ink transition-colors hover:bg-[#ffb74d]">
-          Begin the night
-        </button>
+        </div>
+
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={at(0.4 + story.length * 1.1)} className="flex flex-col gap-5">
+          <div className="flex items-baseline gap-3">
+            <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-[0.32em] text-bone">PASS</h1>
+            <span className="text-[11px] uppercase tracking-widest text-ash">decode · answer · survive</span>
+          </div>
+          <div className="flex items-center gap-5">
+            <button onClick={onBegin} className="inline-flex min-h-[44px] items-center justify-center rounded-sm bg-ember px-7 font-[family-name:var(--font-sans)] text-sm font-medium text-ink transition-colors hover:bg-[#ffb74d]">
+              Begin the night
+            </button>
+            <button onClick={() => setShowHow((v) => !v)} className="text-[11px] uppercase tracking-widest text-bone-dim underline-offset-4 hover:text-bone hover:underline">
+              {showHow ? 'hide' : 'how this works'}
+            </button>
+          </div>
+          <AnimatePresence>
+            {showHow && (
+              <motion.ol initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+                className="flex flex-col gap-2 overflow-hidden border-l border-white/10 pl-4">
+                {steps.map(([k, t]) => (
+                  <li key={k} className="text-[13px] leading-relaxed text-bone-dim">
+                    <span className="font-medium uppercase tracking-widest text-bone">{k}.</span> {t}
+                  </li>
+                ))}
+              </motion.ol>
+            )}
+          </AnimatePresence>
+        </motion.div>
       </div>
     </motion.div>
   );
@@ -269,7 +305,7 @@ const Label = ({ children }: { children: React.ReactNode }) => (
   <p className="text-[10px] font-medium uppercase tracking-[0.32em] text-ash">{children}</p>
 );
 
-function Header({ state, r, muted, onHelp, onMute }: { state: GameState; r: number; muted: boolean; onHelp: () => void; onMute: () => void }) {
+function Header({ state, r, muted, lowLight, onHelp, onMute }: { state: GameState; r: number; muted: boolean; lowLight: boolean; onHelp: () => void; onMute: () => void }) {
   return (
     <header className="flex flex-col gap-4">
       <div className="flex items-end justify-between">
@@ -290,7 +326,7 @@ function Header({ state, r, muted, onHelp, onMute }: { state: GameState; r: numb
         <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-ember-deep to-ember" style={{ width: `${r * 100}%`, transition: 'width 700ms ease-out' }} />
       </div>
       <div className={`flex justify-between font-[family-name:var(--font-mono)] text-[10px] text-bone-dim ${shadow}`}>
-        <span>light {state.daylight}</span>
+        <span className={lowLight ? 'animate-pulse text-ember' : ''}>light {state.daylight}{lowLight ? ' · failing' : ''}</span>
         <span>doubt {state.suspicion.toFixed(2)}</span>
         <span>{state.humanity.count ? `believed ${humanityAvg(state).toFixed(2)}` : 'unspoken'}</span>
       </div>
