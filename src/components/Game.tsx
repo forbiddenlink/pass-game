@@ -19,6 +19,7 @@ import { CIPHER_LEARN, interceptFor, ABOUT } from '@/lib/history';
 import { sound } from '@/lib/sound';
 import Scene from '@/components/Scene';
 import Rotor from '@/components/Rotor';
+import TellMeter from '@/components/TellMeter';
 import type { Puzzle } from '@/lib/puzzle';
 
 const ALPHABET = 'abcdefghijklmnopqrstuvwxyz'.split('');
@@ -689,6 +690,7 @@ function ReplyPanel({ question, pressing = false, loading = false, judging, onRe
       <textarea id="reply" name="reply" value={val} onChange={(e) => setVal(e.target.value)} disabled={judging} rows={2} aria-label="your reply"
         placeholder="say something a person would say…"
         className="resize-none rounded-sm bg-black/40 px-4 py-3 text-[15px] text-bone outline-none ring-1 ring-white/10 placeholder:text-ash/60 disabled:opacity-50" />
+      <TellMeter text={val} />
       <div className="flex items-center gap-5">
         <button disabled={judging || !val.trim()} onClick={() => onReply(val)}
           className="inline-flex min-h-[44px] items-center justify-center rounded-sm bg-ember px-5 font-[family-name:var(--font-sans)] text-sm font-medium text-ink transition-colors hover:bg-[#ffb74d] disabled:bg-white/10 disabled:text-ash">
