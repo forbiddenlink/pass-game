@@ -13,11 +13,16 @@ import {
 } from '@/lib/game';
 import { decode } from '@/lib/cipher';
 import { scoreReply } from '@/lib/score';
+import { interrogatorLine } from '@/lib/lines';
+import { sound } from '@/lib/sound';
 import type { Puzzle } from '@/lib/puzzle';
 
 const ALPHABET = 'abcdefghijklmnopqrstuvwxyz'.split('');
+const COMMON = new Set('the and you what does day mean to me my a i is it do we when who are of from on out'.split(' '));
+const looksEnglish = (s: string) =>
+  !s.includes('·') && s.trim().split(/\s+/).filter((w) => COMMON.has(w)).length >= 2;
 
-/* ---------- the temperature system: daylight ratio -> sky ---------- */
+/* ---------- temperature system ---------- */
 const clampR = (n: number) => Math.max(0, Math.min(1, n));
 function mix(a: string, b: string, t: number) {
   const p = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
@@ -28,31 +33,23 @@ function mix(a: string, b: string, t: number) {
 }
 const tri = (r: number, hi: string, mid: string, lo: string) =>
   r >= 0.5 ? mix(mid, hi, (r - 0.5) * 2) : mix(lo, mid, r * 2);
-
 const PHASE_NAME = (r: number) =>
-  r > 0.8 ? 'the long noon'
-  : r > 0.55 ? 'the sun leans west'
-  : r > 0.3 ? 'amber hour'
-  : r > 0.08 ? 'the red gate'
-  : 'dark';
+  r > 0.8 ? 'the long noon' : r > 0.55 ? 'the sun leans west' : r > 0.3 ? 'amber hour' : r > 0.08 ? 'the red gate' : 'dark';
 
 const DECODE_HINT: Record<string, string> = {
   caesar: 'Turn the rotor until the line reads as true words.',
   substitution: 'Tap an enciphered letter, then choose what it truly is. Every copy follows.',
   vigenere: 'Use the key. Set down the line by hand.',
 };
-const CIPHER_LABEL: Record<string, string> = {
-  caesar: 'caesar rotor',
-  substitution: 'substitution',
-  vigenere: 'vigenère',
-};
+const CIPHER_LABEL: Record<string, string> = { caesar: 'caesar rotor', substitution: 'substitution', vigenere: 'vigenère' };
 const HINT_LABEL: Record<string, string> = {
   caesar: 'spend light for the rotor setting',
   substitution: 'spend light to reveal two letters',
   vigenere: 'spend light for the opening words',
 };
-
 const shadow = '[text-shadow:0_1px_4px_rgba(8,6,12,0.92)]';
+
+type Verdict = { line: string; tell: string; good: boolean; humanScore: number; skip: boolean };
 
 export default function Game() {
   const [seed] = useState(() => 1);
@@ -60,6 +57,8 @@ export default function Game() {
   const [judging, setJudging] = useState(false);
   const [message, setMessage] = useState('');
   const [brief, setBrief] = useState(true);
+  const [verdict, setVerdict] = useState<Verdict | null>(null);
+  const [muted, setMuted] = useState(false);
   const reduce = useReducedMotion();
 
   const r = clampR(state.daylight / state.econ.start);
@@ -68,23 +67,34 @@ export default function Game() {
   const sunCol = tri(r, '#ffd98a', '#e07b38', '#3a2030');
   const ease1200 = reduce ? 'none' : '1200ms ease-out';
 
+  useEffect(() => { sound.ambient(r); }, [r]);
+  useEffect(() => {
+    if (state.status === 'lost') sound.switchOff();
+    if (state.status === 'won') sound.verdict(true);
+  }, [state.status]);
+
+  function begin() {
+    sound.init();
+    sound.startDrone();
+    setBrief(false);
+  }
   function reset() {
     setState(createGame({ seed }));
     setMessage('');
+    setVerdict(null);
   }
   function onAttempt(guess: string) {
     const next = attemptDecode(state, guess);
     if (next === state) return;
-    setMessage(
-      next.phase === 'decoding' && next.status === 'playing'
-        ? `Not yet. The light slips. (−${state.econ.wrong})`
-        : '',
-    );
+    if (next.phase === 'replying') sound.resolved();
+    else if (next.status === 'lost') {/* switchOff via effect */}
+    else sound.tick();
+    setMessage(next.phase === 'decoding' && next.status === 'playing' ? `Not yet. The light slips. (−${state.econ.wrong})` : '');
     setState(next);
   }
   async function onReply(text: string) {
     setJudging(true);
-    let humanScore: number, tell: string;
+    let humanScore: number, tell: string, line: string;
     try {
       const res = await fetch('/api/judge', {
         method: 'POST',
@@ -94,61 +104,60 @@ export default function Game() {
       const j = await res.json();
       humanScore = j.humanScore;
       tell = j.tell;
+      line = j.line || interrogatorLine(j.humanScore, text.length);
     } catch {
       const h = scoreReply(text);
       humanScore = h.score;
       tell = h.tell;
+      line = interrogatorLine(h.score, text.length);
     }
-    setMessage(tell ? `They study you. ${tell}.` : '');
-    setState((s) => submitReply(s, humanScore));
     setJudging(false);
+    const good = humanScore >= 0.45;
+    sound.verdict(good);
+    setVerdict({ line, tell, good, humanScore, skip: false });
+  }
+  function onSkip() {
+    sound.verdict(false);
+    setVerdict({ line: interrogatorLine(0, state.turn), tell: '', good: false, humanScore: 0, skip: true });
+  }
+  function resolveVerdict() {
+    if (!verdict) return;
+    sound.tick();
+    setState((s) => (verdict.skip ? skipReply(s) : submitReply(s, verdict.humanScore)));
+    setMessage('');
+    setVerdict(null);
   }
 
   return (
-    <main
-      className="relative min-h-[100dvh] overflow-hidden"
-      style={{ background: `linear-gradient(${skyTop} 0%, ${skyBot} 100%)`, transition: `background ${ease1200}` }}
-    >
-      {/* the sun — offset to the right so it's never hidden behind the transcript. it sinks as light is spent. */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-[76%] -z-0 h-[46vmin] w-[46vmin] -translate-x-1/2 rounded-full blur-[2px]"
+    <main className="relative min-h-[100dvh] overflow-hidden"
+      style={{ background: `linear-gradient(${skyTop} 0%, ${skyBot} 100%)`, transition: `background ${ease1200}` }}>
+      <div aria-hidden className="pointer-events-none absolute left-[76%] -z-0 h-[46vmin] w-[46vmin] -translate-x-1/2 rounded-full blur-[2px]"
         style={{
           top: `${(1 - r) * 64 + 12}%`,
           background: `radial-gradient(circle, ${sunCol} 0%, ${mix(sunCol, skyBot, 0.6)} 45%, transparent 70%)`,
           opacity: clampR(r * 1.5),
           transition: `top ${ease1200}, opacity ${ease1200}`,
-        }}
-      />
+        }} />
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-0"
         style={{ background: 'linear-gradient(to bottom, transparent 28%, rgba(8,6,12,.6) 100%)' }} />
 
       <div className="relative mx-auto flex min-h-[100dvh] max-w-2xl flex-col px-6 py-10 sm:py-14">
         <div className="flex w-full max-w-[34rem] flex-col gap-8">
-          <Header state={state} r={r} onHelp={() => setBrief(true)} />
+          <Header state={state} r={r} muted={muted} onHelp={() => setBrief(true)} onMute={() => setMuted(sound.toggleMute())} />
 
           {state.status === 'playing' ? (
             <AnimatePresence mode="wait">
-              {state.phase === 'decoding' ? (
+              {verdict ? (
+                <Panel key="v" reduce={!!reduce}>
+                  <VerdictBeat verdict={verdict} onContinue={resolveVerdict} last={state.turn >= state.econ.turns && !verdict.skip} />
+                </Panel>
+              ) : state.phase === 'decoding' ? (
                 <Panel key={`d${state.turn}`} reduce={!!reduce}>
-                  <DecodePanel
-                    puzzle={state.puzzle}
-                    hintUsed={state.hintUsed}
-                    onAttempt={onAttempt}
-                    onHint={() => setState(useHint(state))}
-                  />
+                  <DecodePanel puzzle={state.puzzle} hintUsed={state.hintUsed} onAttempt={onAttempt} onHint={() => { sound.key(); setState(useHint(state)); }} />
                 </Panel>
               ) : (
                 <Panel key={`r${state.turn}`} reduce={!!reduce}>
-                  <ReplyPanel
-                    question={state.puzzle.plaintext}
-                    judging={judging}
-                    onReply={onReply}
-                    onSkip={() => {
-                      setMessage('');
-                      setState(skipReply(state));
-                    }}
-                  />
+                  <ReplyPanel question={state.puzzle.plaintext} judging={judging} onReply={onReply} onSkip={onSkip} />
                 </Panel>
               )}
             </AnimatePresence>
@@ -162,12 +171,35 @@ export default function Game() {
         </div>
       </div>
 
-      <AnimatePresence>{brief && <Brief onBegin={() => setBrief(false)} />}</AnimatePresence>
+      <AnimatePresence>{brief && <Brief onBegin={begin} />}</AnimatePresence>
     </main>
   );
 }
 
-/* ---------- onboarding: what you are, what to do ---------- */
+/* ---------- typewriter: gives the interrogator a voice ---------- */
+function Typewriter({ text, className, speed = 26 }: { text: string; className?: string; speed?: number }) {
+  const reduce = useReducedMotion();
+  const [n, setN] = useState(reduce ? text.length : 0);
+  useEffect(() => {
+    if (reduce) { setN(text.length); return; }
+    setN(0);
+    let i = 0;
+    const id = window.setInterval(() => {
+      i += 1;
+      setN(i);
+      if (i % 2 === 0) sound.key();
+      if (i >= text.length) window.clearInterval(id);
+    }, speed);
+    return () => window.clearInterval(id);
+  }, [text, speed, reduce]);
+  return (
+    <span className={className}>
+      {text.slice(0, n)}
+      {n < text.length && <span className="text-ember">▍</span>}
+    </span>
+  );
+}
+
 function Brief({ onBegin }: { onBegin: () => void }) {
   const steps = [
     { k: 'Decode', t: 'Every question arrives enciphered. Crack it before the sun sets. Wrong guesses cost daylight.' },
@@ -175,11 +207,9 @@ function Brief({ onBegin }: { onBegin: () => void }) {
     { k: 'Survive', t: 'Daylight is your life. Last until dawn and you pass the night. Run out, and you go dark.' },
   ];
   return (
-    <motion.div
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-      className="absolute inset-0 z-20 flex items-center justify-center bg-[rgba(6,5,10,0.88)] px-6 backdrop-blur-sm"
-      role="dialog" aria-modal="true" aria-label="how to play"
-    >
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+      className="absolute inset-0 z-20 flex items-center justify-center bg-[rgba(6,5,10,0.9)] px-6 backdrop-blur-sm"
+      role="dialog" aria-modal="true" aria-label="how to play">
       <div className="flex w-full max-w-md flex-col gap-7">
         <div className="flex flex-col gap-3">
           <h1 className="font-[family-name:var(--font-display)] text-4xl font-semibold tracking-[0.3em] text-bone">PASS</h1>
@@ -197,10 +227,7 @@ function Brief({ onBegin }: { onBegin: () => void }) {
             </li>
           ))}
         </ol>
-        <button
-          onClick={onBegin}
-          className="inline-flex min-h-[44px] items-center justify-center self-start rounded-sm bg-ember px-7 font-[family-name:var(--font-sans)] text-sm font-medium text-ink transition-colors hover:bg-[#ffb74d]"
-        >
+        <button onClick={onBegin} className="inline-flex min-h-[44px] items-center justify-center self-start rounded-sm bg-ember px-7 font-[family-name:var(--font-sans)] text-sm font-medium text-ink transition-colors hover:bg-[#ffb74d]">
           Begin the night
         </button>
       </div>
@@ -211,12 +238,9 @@ function Brief({ onBegin }: { onBegin: () => void }) {
 function Panel({ children, reduce }: { children: React.ReactNode; reduce: boolean }) {
   return (
     <motion.section
-      initial={reduce ? false : { opacity: 0, y: 14 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={reduce ? undefined : { opacity: 0, y: -10 }}
+      initial={reduce ? false : { opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={reduce ? undefined : { opacity: 0, y: -10 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      className="flex flex-col gap-5 rounded-sm bg-[rgba(10,8,14,0.62)] p-6 backdrop-blur-[3px] ring-1 ring-white/5"
-    >
+      className="flex flex-col gap-5 rounded-sm bg-[rgba(10,8,14,0.62)] p-6 backdrop-blur-[3px] ring-1 ring-white/5">
       {children}
     </motion.section>
   );
@@ -226,25 +250,25 @@ const Label = ({ children }: { children: React.ReactNode }) => (
   <p className="text-[10px] font-medium uppercase tracking-[0.32em] text-ash">{children}</p>
 );
 
-function Header({ state, r, onHelp }: { state: GameState; r: number; onHelp: () => void }) {
+function Header({ state, r, muted, onHelp, onMute }: { state: GameState; r: number; muted: boolean; onHelp: () => void; onMute: () => void }) {
   return (
     <header className="flex flex-col gap-4">
       <div className="flex items-end justify-between">
-        <h1 className={`font-[family-name:var(--font-display)] text-[26px] font-semibold leading-none tracking-[0.34em] text-bone ${shadow}`}>
-          PASS
-        </h1>
-        <div className="flex items-center gap-3">
-          <span className={`font-[family-name:var(--font-sans)] text-[11px] lowercase tracking-wide text-bone-dim ${shadow}`}>
+        <h1 className={`font-[family-name:var(--font-display)] text-[26px] font-semibold leading-none tracking-[0.34em] text-bone ${shadow}`}>PASS</h1>
+        <div className="flex items-center gap-1">
+          <span className={`mr-2 font-[family-name:var(--font-sans)] text-[11px] lowercase tracking-wide text-bone-dim ${shadow}`}>
             night {state.turn} of {state.econ.turns} · {PHASE_NAME(r)}
           </span>
-          <button onClick={onHelp} aria-label="how to play" className="inline-flex h-11 w-11 items-center justify-center rounded-full text-[12px] text-bone-dim hover:text-bone">
-            <span className="flex h-6 w-6 items-center justify-center rounded-full ring-1 ring-white/15 hover:ring-white/40">?</span>
+          <button onClick={onMute} aria-label={muted ? 'unmute' : 'mute'} className="inline-flex h-11 w-9 items-center justify-center text-bone-dim hover:text-bone">
+            <span className="text-[13px]">{muted ? '🔇' : '♪'}</span>
+          </button>
+          <button onClick={onHelp} aria-label="how to play" className="inline-flex h-11 w-9 items-center justify-center text-bone-dim hover:text-bone">
+            <span className="flex h-6 w-6 items-center justify-center rounded-full text-[12px] ring-1 ring-white/15 hover:ring-white/40">?</span>
           </button>
         </div>
       </div>
       <div className="relative h-px w-full bg-white/10">
-        <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-ember-deep to-ember"
-          style={{ width: `${r * 100}%`, transition: 'width 700ms ease-out' }} />
+        <div className="absolute inset-y-0 left-0 bg-gradient-to-r from-ember-deep to-ember" style={{ width: `${r * 100}%`, transition: 'width 700ms ease-out' }} />
       </div>
       <div className={`flex justify-between font-[family-name:var(--font-mono)] text-[10px] text-bone-dim ${shadow}`}>
         <span>light {state.daylight}</span>
@@ -255,18 +279,30 @@ function Header({ state, r, onHelp }: { state: GameState; r: number; onHelp: () 
   );
 }
 
-function DecodePanel({
-  puzzle, hintUsed, onAttempt, onHint,
-}: { puzzle: Puzzle; hintUsed: boolean; onAttempt: (g: string) => void; onHint: () => void }) {
+function VerdictBeat({ verdict, onContinue, last }: { verdict: Verdict; onContinue: () => void; last: boolean }) {
+  return (
+    <>
+      <Label>the interrogator</Label>
+      <Typewriter text={verdict.line} className="font-[family-name:var(--font-display)] text-xl italic leading-snug text-bone" />
+      {verdict.tell && <p className="text-[12px] text-bone-dim">{verdict.tell}.</p>}
+      <p className={`text-[11px] uppercase tracking-widest ${verdict.good ? 'text-ember' : 'text-ash'}`}>
+        {verdict.skip ? 'their suspicion sharpens' : verdict.good ? 'their suspicion eases' : 'their suspicion sharpens'}
+      </p>
+      <button onClick={onContinue} className="inline-flex min-h-[44px] items-center justify-center self-start rounded-sm bg-ember px-5 font-[family-name:var(--font-sans)] text-sm font-medium text-ink transition-colors hover:bg-[#ffb74d]">
+        {last ? 'meet the morning' : 'the next question'}
+      </button>
+    </>
+  );
+}
+
+function DecodePanel({ puzzle, hintUsed, onAttempt, onHint }: { puzzle: Puzzle; hintUsed: boolean; onAttempt: (g: string) => void; onHint: () => void }) {
   return (
     <>
       <div className="flex flex-col gap-1.5">
         <Label>intercept · {CIPHER_LABEL[puzzle.cipher.type]}</Label>
         <p className="text-[12px] leading-snug text-bone-dim">{DECODE_HINT[puzzle.cipher.type]}</p>
       </div>
-      <p aria-label="enciphered message" className="font-[family-name:var(--font-mono)] text-xl tracking-[0.12em] text-ember break-words">
-        {puzzle.ciphertext}
-      </p>
+      <p aria-label="enciphered message" className="font-[family-name:var(--font-mono)] text-xl tracking-[0.12em] text-ember break-words">{puzzle.ciphertext}</p>
       {puzzle.cipher.type === 'caesar' ? (
         <CaesarDial puzzle={puzzle} hintUsed={hintUsed} onAttempt={onAttempt} />
       ) : puzzle.cipher.type === 'substitution' ? (
@@ -283,11 +319,16 @@ function DecodePanel({
   );
 }
 
-const Submit = ({ onClick }: { onClick: () => void }) => (
-  <button onClick={onClick} className="inline-flex min-h-[44px] items-center justify-center self-start rounded-sm bg-ember px-5 font-[family-name:var(--font-sans)] text-sm font-medium text-ink transition-colors hover:bg-[#ffb74d]">
-    this is what they said
-  </button>
-);
+function Submit({ onClick, ready }: { onClick: () => void; ready?: boolean }) {
+  return (
+    <div className="flex items-center gap-3">
+      <button onClick={onClick} className={`inline-flex min-h-[44px] items-center justify-center self-start rounded-sm bg-ember px-5 font-[family-name:var(--font-sans)] text-sm font-medium text-ink transition-all hover:bg-[#ffb74d] ${ready ? 'ring-2 ring-bone/70 ring-offset-2 ring-offset-transparent' : ''}`}>
+        this is what they said
+      </button>
+      {ready && <span className="text-[11px] uppercase tracking-widest text-ember">this reads true</span>}
+    </div>
+  );
+}
 
 function CaesarDial({ puzzle, hintUsed, onAttempt }: { puzzle: Puzzle; hintUsed: boolean; onAttempt: (g: string) => void }) {
   const [shift, setShift] = useState(0);
@@ -299,14 +340,12 @@ function CaesarDial({ puzzle, hintUsed, onAttempt }: { puzzle: Puzzle; hintUsed:
       {hintUsed && <p className="text-[11px] uppercase tracking-widest text-ember">the rotor rests at {answer}</p>}
       <label className="flex min-h-[44px] items-center gap-4 text-[11px] uppercase tracking-widest text-ash">
         <span className="tabular-nums">rotor {shift}</span>
-        <input
-          type="range" min={0} max={25} value={shift}
-          onChange={(e) => setShift(Number(e.target.value))}
+        <input type="range" min={0} max={25} value={shift}
+          onChange={(e) => { setShift(Number(e.target.value)); sound.key(); }}
           aria-label="cipher rotor" aria-valuetext={`rotor at ${shift} of 25`}
-          className="h-6 flex-1 cursor-pointer accent-ember"
-        />
+          className="h-6 flex-1 cursor-pointer accent-ember" />
       </label>
-      <Submit onClick={() => onAttempt(preview)} />
+      <Submit onClick={() => onAttempt(preview)} ready={looksEnglish(preview)} />
     </div>
   );
 }
@@ -325,11 +364,7 @@ function SubstitutionGrid({ puzzle, hintUsed, onAttempt }: { puzzle: Puzzle; hin
   const [sel, setSel] = useState<string | null>(null);
   const pickerRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (sel) pickerRef.current?.querySelector('button')?.focus();
-  }, [sel]);
-
-  // hint: reveal up to two correct letters not yet mapped
+  useEffect(() => { if (sel) pickerRef.current?.querySelector('button')?.focus(); }, [sel]);
   useEffect(() => {
     if (!hintUsed) return;
     setMap((m) => {
@@ -337,23 +372,18 @@ function SubstitutionGrid({ puzzle, hintUsed, onAttempt }: { puzzle: Puzzle; hin
       let added = 0;
       for (let i = 0; i < puzzle.ciphertext.length && added < 2; i++) {
         const c = puzzle.ciphertext[i];
-        if (c !== ' ' && !n[c]) {
-          n[c] = puzzle.plaintext[i];
-          added++;
-        }
+        if (c !== ' ' && !n[c]) { n[c] = puzzle.plaintext[i]; added++; }
       }
       return n;
     });
   }, [hintUsed, puzzle]);
 
-  const cipherLetters = useMemo(
-    () => Array.from(new Set(puzzle.ciphertext.replace(/ /g, '').split(''))),
-    [puzzle],
-  );
+  const cipherLetters = useMemo(() => Array.from(new Set(puzzle.ciphertext.replace(/ /g, '').split(''))), [puzzle]);
   const previewChars = puzzle.ciphertext.split('');
 
   function assign(plain: string) {
     if (!sel || locked[sel]) return;
+    sound.key();
     setMap((m) => {
       const n = { ...m };
       for (const k in n) if (n[k] === plain && !locked[k]) delete n[k];
@@ -368,47 +398,30 @@ function SubstitutionGrid({ puzzle, hintUsed, onAttempt }: { puzzle: Puzzle; hin
   return (
     <div className="flex flex-col gap-4">
       <p aria-live="polite" aria-label={`decoded so far: ${guess.replace(/·/g, 'blank')}`} className="font-[family-name:var(--font-display)] text-lg tracking-wide">
-        {previewChars.map((c, i) =>
-          c === ' ' ? ' ' : (
-            <span key={i} className={map[c] ? 'text-bone' : 'text-ash/60'}>
-              {map[c] ?? '·'}
-            </span>
-          ),
-        )}
+        {previewChars.map((c, i) => (c === ' ' ? ' ' : (
+          <span key={i} className={map[c] ? 'text-bone' : 'text-ash/60'}>{map[c] ?? '·'}</span>
+        )))}
       </p>
-
       <div className="flex flex-wrap gap-1.5" role="group" aria-label="enciphered letters">
         {cipherLetters.map((c) => (
-          <button
-            key={c}
-            disabled={!!locked[c]}
-            aria-pressed={sel === c}
+          <button key={c} disabled={!!locked[c]} aria-pressed={sel === c}
             aria-label={locked[c] ? `${c}, fixed as ${locked[c]}` : map[c] ? `${c}, read as ${map[c]}` : `${c}, unread`}
-            onClick={() => setSel(c)}
+            onClick={() => { setSel(c); sound.tick(); }}
             className={`h-11 w-11 rounded-sm font-[family-name:var(--font-mono)] text-sm transition-colors ${
-              locked[c]
-                ? 'bg-ember-deep/30 text-ember'
-                : sel === c
-                  ? 'bg-ember text-ink ring-2 ring-bone'
-                  : 'bg-white/[0.07] text-bone-dim hover:bg-white/15'
-            }`}
-          >
+              locked[c] ? 'bg-ember-deep/30 text-ember' : sel === c ? 'bg-ember text-ink ring-2 ring-bone' : 'bg-white/[0.07] text-bone-dim hover:bg-white/15'
+            }`}>
             {map[c] ?? c}
           </button>
         ))}
       </div>
-
       {sel && (
         <div ref={pickerRef} role="group" aria-label={`choose a letter for ${sel}`} className="flex flex-wrap gap-1">
           {ALPHABET.map((p) => (
-            <button key={p} onClick={() => assign(p)} className="h-9 w-9 rounded-sm bg-white/[0.04] font-[family-name:var(--font-mono)] text-xs text-bone-dim hover:bg-ember hover:text-ink">
-              {p}
-            </button>
+            <button key={p} onClick={() => assign(p)} className="h-9 w-9 rounded-sm bg-white/[0.04] font-[family-name:var(--font-mono)] text-xs text-bone-dim hover:bg-ember hover:text-ink">{p}</button>
           ))}
         </div>
       )}
-
-      <Submit onClick={() => onAttempt(guess)} />
+      <Submit onClick={() => onAttempt(guess)} ready={looksEnglish(guess)} />
     </div>
   );
 }
@@ -419,41 +432,29 @@ function TypedDecode({ puzzle, hintUsed, onAttempt }: { puzzle: Puzzle; hintUsed
   return (
     <div className="flex flex-col gap-4">
       {puzzle.revealedKey && (
-        <p className="text-[11px] uppercase tracking-widest text-ash">
-          the key, at last. <span className="font-[family-name:var(--font-mono)] text-ember">{puzzle.revealedKey}</span>
-        </p>
+        <p className="text-[11px] uppercase tracking-widest text-ash">the key, at last. <span className="font-[family-name:var(--font-mono)] text-ember">{puzzle.revealedKey}</span></p>
       )}
       {hintUsed && <p className="text-[11px] uppercase tracking-widest text-ember">it opens: “{opening}…”</p>}
-      <input
-        value={val} onChange={(e) => setVal(e.target.value)}
-        aria-label="your decoding" placeholder="set down the line they spoke…"
-        className="min-h-[44px] rounded-sm bg-black/40 px-4 py-3 font-[family-name:var(--font-display)] text-lg text-bone outline-none ring-1 ring-white/10 placeholder:text-ash/60"
-      />
-      <Submit onClick={() => onAttempt(val)} />
+      <input value={val} onChange={(e) => setVal(e.target.value)} aria-label="your decoding" placeholder="set down the line they spoke…"
+        className="min-h-[44px] rounded-sm bg-black/40 px-4 py-3 font-[family-name:var(--font-display)] text-lg text-bone outline-none ring-1 ring-white/10 placeholder:text-ash/60" />
+      <Submit onClick={() => onAttempt(val)} ready={looksEnglish(val)} />
     </div>
   );
 }
 
-function ReplyPanel({
-  question, judging, onReply, onSkip,
-}: { question: string; judging: boolean; onReply: (t: string) => void; onSkip: () => void }) {
+function ReplyPanel({ question, judging, onReply, onSkip }: { question: string; judging: boolean; onReply: (t: string) => void; onSkip: () => void }) {
   const [val, setVal] = useState('');
   return (
     <>
       <Label>decoded · they ask</Label>
-      <p className="font-[family-name:var(--font-display)] text-2xl italic leading-snug text-bone">“{question}?”</p>
+      <Typewriter text={`“${question}?”`} className="font-[family-name:var(--font-display)] text-2xl italic leading-snug text-bone" />
       <p className="text-[12px] text-bone-dim">Answer as a person to be believed (it costs light), or stay silent and keep what you have.</p>
-      <textarea
-        value={val} onChange={(e) => setVal(e.target.value)} disabled={judging} rows={2}
-        aria-label="your reply"
+      <textarea value={val} onChange={(e) => setVal(e.target.value)} disabled={judging} rows={2} aria-label="your reply"
         placeholder="say something a person would say…"
-        className="resize-none rounded-sm bg-black/40 px-4 py-3 text-[15px] text-bone outline-none ring-1 ring-white/10 placeholder:text-ash/60 disabled:opacity-50"
-      />
+        className="resize-none rounded-sm bg-black/40 px-4 py-3 text-[15px] text-bone outline-none ring-1 ring-white/10 placeholder:text-ash/60 disabled:opacity-50" />
       <div className="flex items-center gap-5">
-        <button
-          disabled={judging || !val.trim()} onClick={() => onReply(val)}
-          className="inline-flex min-h-[44px] items-center justify-center rounded-sm bg-ember px-5 font-[family-name:var(--font-sans)] text-sm font-medium text-ink transition-colors hover:bg-[#ffb74d] disabled:bg-white/10 disabled:text-ash"
-        >
+        <button disabled={judging || !val.trim()} onClick={() => onReply(val)}
+          className="inline-flex min-h-[44px] items-center justify-center rounded-sm bg-ember px-5 font-[family-name:var(--font-sans)] text-sm font-medium text-ink transition-colors hover:bg-[#ffb74d] disabled:bg-white/10 disabled:text-ash">
           {judging ? 'they consider…' : 'speak'}
         </button>
         <button disabled={judging} onClick={onSkip} className="inline-flex min-h-[44px] items-center text-[11px] uppercase tracking-widest text-bone-dim underline-offset-4 hover:text-bone hover:underline disabled:opacity-40">
@@ -474,10 +475,8 @@ const ENDINGS: Record<string, { title: string; line: string }> = {
 function EndingScreen({ state, onReset }: { state: GameState; onReset: () => void }) {
   const e = ENDINGS[state.ending ?? 'OFF'];
   return (
-    <motion.section
-      initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1.1, ease: 'easeOut' }}
-      className="flex flex-1 flex-col items-start justify-center gap-8"
-    >
+    <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 1.1, ease: 'easeOut' }}
+      className="flex flex-1 flex-col items-start justify-center gap-8">
       <div className="flex flex-col gap-3">
         <h2 className="font-[family-name:var(--font-display)] text-3xl text-bone">{e.title}</h2>
         <p className="max-w-sm text-[15px] leading-relaxed text-bone-dim">{e.line}</p>
