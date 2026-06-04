@@ -15,6 +15,7 @@ import {
 import { decode } from '@/lib/cipher';
 import { scoreReply } from '@/lib/score';
 import { interrogatorLine, pressLine } from '@/lib/lines';
+import { CIPHER_LEARN, interceptFor, ABOUT } from '@/lib/history';
 import { sound } from '@/lib/sound';
 import Scene from '@/components/Scene';
 import Rotor from '@/components/Rotor';
@@ -73,6 +74,7 @@ export default function Game() {
   const [judging, setJudging] = useState(false);
   const [message, setMessage] = useState('');
   const [brief, setBrief] = useState(true);
+  const [about, setAbout] = useState(false);
   const [verdict, setVerdict] = useState<Verdict | null>(null);
   const [pressing, setPressing] = useState<string | null>(null); // null = not pressing; '' = loading; else the follow-up
   const [pressed, setPressed] = useState(false);
@@ -235,7 +237,7 @@ export default function Game() {
               )}
             </AnimatePresence>
           ) : (
-            <EndingScreen state={state} nightLabel={nightLabel} onReset={reset} />
+            <EndingScreen state={state} nightLabel={nightLabel} onReset={reset} onAbout={() => setAbout(true)} />
           )}
 
           <p role="status" aria-live="polite" className={`min-h-[1.25rem] font-[family-name:var(--font-display)] text-[15px] italic text-ember ${shadow}`}>
@@ -244,8 +246,33 @@ export default function Game() {
         </div>
       </div>
 
-      <AnimatePresence>{brief && <Brief onBegin={begin} />}</AnimatePresence>
+      <AnimatePresence>{brief && <Brief onBegin={begin} onAbout={() => setAbout(true)} />}</AnimatePresence>
+      <AnimatePresence>{about && <About onClose={() => setAbout(false)} />}</AnimatePresence>
     </main>
+  );
+}
+
+function About({ onClose }: { onClose: () => void }) {
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}
+      className="absolute inset-0 z-30 flex items-center justify-center overflow-y-auto bg-[rgba(4,3,8,0.94)] px-6 py-12 backdrop-blur-sm"
+      role="dialog" aria-modal="true" aria-label="about alan turing">
+      <div className="flex w-full max-w-lg flex-col gap-5">
+        <p className="text-[10px] uppercase tracking-[0.3em] text-ash">in memory</p>
+        <h2 className="font-[family-name:var(--font-display)] text-2xl text-bone">Alan Turing · 1912–1954</h2>
+        {ABOUT.body.map((p, i) => (
+          <p key={i} className="text-[14px] leading-relaxed text-bone-dim">{p}</p>
+        ))}
+        <div className="flex flex-wrap gap-x-5 gap-y-2 border-t border-white/10 pt-4">
+          {ABOUT.links.map((l) => (
+            <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer" className="text-[12px] text-ember underline-offset-4 hover:underline">{l.label}</a>
+          ))}
+        </div>
+        <button onClick={onClose} className="inline-flex min-h-[44px] items-center self-start text-[11px] uppercase tracking-widest text-bone-dim underline-offset-4 hover:text-bone hover:underline">
+          close
+        </button>
+      </div>
+    </motion.div>
   );
 }
 
@@ -297,7 +324,7 @@ function DecryptText({ text, className }: { text: string; className?: string }) 
   return <span className={className}>{out}</span>;
 }
 
-function Brief({ onBegin }: { onBegin: () => void }) {
+function Brief({ onBegin, onAbout }: { onBegin: () => void; onAbout: () => void }) {
   const [showHow, setShowHow] = useState(false);
   const reduce = useReducedMotion();
   const story = [
@@ -339,6 +366,9 @@ function Brief({ onBegin }: { onBegin: () => void }) {
             </button>
             <button onClick={() => setShowHow((v) => !v)} className="text-[11px] uppercase tracking-widest text-bone-dim underline-offset-4 hover:text-bone hover:underline">
               {showHow ? 'hide' : 'how this works'}
+            </button>
+            <button onClick={onAbout} className="text-[11px] uppercase tracking-widest text-bone-dim underline-offset-4 hover:text-bone hover:underline">
+              the history
             </button>
           </div>
           <AnimatePresence>
@@ -438,11 +468,25 @@ function VerdictBeat({ verdict, onContinue, last }: { verdict: Verdict; onContin
 }
 
 function DecodePanel({ puzzle, hintUsed, onAttempt, onHint }: { puzzle: Puzzle; hintUsed: boolean; onAttempt: (g: string) => void; onHint: () => void }) {
+  const [showLearn, setShowLearn] = useState(false);
   return (
     <>
       <div className="flex flex-col gap-1.5">
-        <Label>intercept · {CIPHER_LABEL[puzzle.cipher.type]}</Label>
+        <div className="flex items-center justify-between gap-3">
+          <Label>intercept · {CIPHER_LABEL[puzzle.cipher.type]}</Label>
+          <button onClick={() => setShowLearn((v) => !v)} className="text-[10px] uppercase tracking-widest text-ash underline-offset-4 hover:text-bone-dim hover:underline">
+            what is this?
+          </button>
+        </div>
         <p className="text-[12px] leading-snug text-bone-dim">{DECODE_HINT[puzzle.cipher.type]}</p>
+        <AnimatePresence>
+          {showLearn && (
+            <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}
+              className="overflow-hidden border-l border-ember/30 pl-3 text-[12px] italic leading-relaxed text-ash">
+              {CIPHER_LEARN[puzzle.cipher.type]}
+            </motion.p>
+          )}
+        </AnimatePresence>
       </div>
       <p aria-label="enciphered message" className="font-[family-name:var(--font-mono)] text-xl tracking-[0.12em] text-ember break-words">{puzzle.ciphertext}</p>
       {puzzle.cipher.type === 'caesar' ? (
@@ -457,6 +501,8 @@ function DecodePanel({ puzzle, hintUsed, onAttempt, onHint }: { puzzle: Puzzle; 
           {HINT_LABEL[puzzle.cipher.type]}
         </button>
       )}
+      {/* a discovered fragment of the real history, one per night */}
+      <p className="border-t border-white/5 pt-3 text-[12px] italic leading-relaxed text-ash/80">{interceptFor(puzzle.turn)}</p>
     </>
   );
 }
@@ -620,7 +666,7 @@ const ENDINGS: Record<string, { title: string; line: string }> = {
   OFF: { title: 'Switched off.', line: 'The light failed in the middle of a word.' },
 };
 
-function EndingScreen({ state, nightLabel, onReset }: { state: GameState; nightLabel: string; onReset: () => void }) {
+function EndingScreen({ state, nightLabel, onReset, onAbout }: { state: GameState; nightLabel: string; onReset: () => void; onAbout: () => void }) {
   const e = ENDINGS[state.ending ?? 'OFF'];
   const won = state.status === 'won';
   const reduce = useReducedMotion();
@@ -654,6 +700,9 @@ function EndingScreen({ state, nightLabel, onReset }: { state: GameState; nightL
           The test you sat tonight was imagined by a man who spent his life being tested. Inspired by the work of Alan Turing.
         </p>
         <p className="mt-3 font-[family-name:var(--font-mono)] text-[13px] text-ember">For Alan Turing · 1912–1954</p>
+        <button onClick={onAbout} className="mt-3 text-[11px] uppercase tracking-widest text-bone-dim underline-offset-4 hover:text-bone hover:underline">
+          read his story
+        </button>
       </motion.div>
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={fade(2.6)} className="flex items-center gap-5">
