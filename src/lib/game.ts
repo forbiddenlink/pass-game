@@ -47,7 +47,7 @@ export interface GameState {
   hintUsed: boolean;
 }
 
-const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
+const clamp01 = (n: number) => (Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : 0);
 
 export function humanityAvg(s: GameState): number {
   return s.humanity.count ? s.humanity.total / s.humanity.count : 0;

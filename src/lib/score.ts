@@ -13,7 +13,7 @@ export interface ReplyScore {
   tell: string; // the one-line "tell" shown to the player
 }
 
-const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
+const clamp01 = (n: number) => (Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : 0);
 
 export function scoreReply(reply: string): ReplyScore {
   const text = reply.trim();

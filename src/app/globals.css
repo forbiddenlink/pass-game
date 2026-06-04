@@ -1,26 +1,51 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/*
+  PASS — "interrogation under a setting sun."
+  The palette is a temperature system: warm bone + ember at high sun, draining to
+  cold slate + ink as daylight fails. Neutrals are tinted (never pure grey/black).
+  The live --r (daylight ratio, 1..0) is set on <main> in JS and drives the sky.
+*/
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* warm ink base — tinted toward dusk, never #000 */
+  --color-ink: #0c0a10;
+  --color-ink-2: #16121d;
+  --color-bone: #efe6d4; /* primary prose */
+  --color-bone-dim: #c8bca6; /* secondary prose, tinted warm */
+  --color-ember: #f0a338; /* the daylight accent */
+  --color-ember-deep: #b9622e;
+  --color-ash: #8a8194;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+html,
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  height: 100%;
+}
+body {
+  background: var(--color-ink);
+  color: var(--color-bone);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  font-synthesis-weight: none;
+}
+
+/* visible, on-brand focus ring everywhere */
+:where(button, a, input, textarea, [tabindex]):focus-visible {
+  outline: 2px solid var(--color-ember);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+::selection {
+  background: color-mix(in oklab, var(--color-ember) 35%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }

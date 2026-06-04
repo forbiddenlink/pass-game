@@ -9,7 +9,12 @@
  */
 
 import { GoogleGenAI, Type } from '@google/genai';
+import { normalize } from './cipher';
 import type { ThemeTag } from './puzzle';
+
+const THEME_TAGS: ThemeTag[] = ['light', 'time', 'memory', 'fear', 'identity'];
+const asTheme = (t: string): ThemeTag =>
+  (THEME_TAGS as string[]).includes(t) ? (t as ThemeTag) : 'identity';
 
 const MODEL = 'gemini-2.5-flash';
 
@@ -126,5 +131,5 @@ export async function generateQuestion(input: {
   });
   const parsed = JSON.parse(res.text ?? '{}') as GeminiQuestion;
   if (!parsed.plaintext) throw new Error('gemini: empty question');
-  return parsed;
+  return { plaintext: normalize(parsed.plaintext), themeTag: asTheme(parsed.themeTag) };
 }

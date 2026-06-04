@@ -17,10 +17,11 @@ export async function POST(req: Request) {
   }
   const reply = (body.reply ?? '').slice(0, 600); // sanitize length
   const question = (body.question ?? '').slice(0, 300);
+  const recentTranscript = (body.recentTranscript ?? '').slice(0, 2000);
 
   if (geminiEnabled()) {
     try {
-      const v = await judgeReply({ question, reply, recentTranscript: body.recentTranscript });
+      const v = await judgeReply({ question, reply, recentTranscript });
       return Response.json({ humanScore: v.human_score, tell: v.tell, line: v.line, source: 'gemini' });
     } catch {
       /* fall through to offline */

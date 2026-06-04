@@ -5,6 +5,7 @@ import {
   useHint,
   submitReply,
   skipReply,
+  humanityAvg,
   DEFAULT_ECON,
   type GameState,
 } from './game';
@@ -70,6 +71,12 @@ describe('reply phase', () => {
     const base = solve(createGame({ seed: 1 }));
     expect(submitReply(base, 0.2).suspicion).toBeGreaterThan(base.suspicion);
     expect(submitReply(base, 0.9).suspicion).toBeLessThanOrEqual(base.suspicion);
+  });
+
+  it('a NaN score (malformed judge response) is treated as 0, never poisoning humanity', () => {
+    const s = submitReply(solve(createGame({ seed: 1 })), Number.NaN);
+    expect(Number.isFinite(humanityAvg(s))).toBe(true);
+    expect(s.humanity.total).toBe(0);
   });
 
   it('skipping costs no daylight but nudges suspicion up and advances the turn', () => {
