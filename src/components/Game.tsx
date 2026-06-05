@@ -328,7 +328,7 @@ export default function Game() {
         style={{ background: 'radial-gradient(ellipse at 50% 45%, transparent 30%, rgba(140,20,20,0.6) 100%)' }} />
 
       <div className="relative mx-auto flex min-h-[100dvh] max-w-2xl flex-col px-6 py-10 sm:py-14">
-        <motion.div animate={shake} className="flex w-full max-w-[34rem] flex-col gap-8">
+        <motion.div animate={shake} aria-hidden={brief} className={`flex w-full max-w-[34rem] flex-col gap-8 transition-opacity duration-500 ${brief ? 'pointer-events-none opacity-0' : 'opacity-100'}`}>
           <Header state={state} r={r} muted={muted} lowLight={lowLight} onHelp={() => setBrief(true)} onMute={() => setMuted(sound.toggleMute())} />
 
           {state.status === 'playing' && transcript.length > 0 && <Transcript items={transcript} />}
@@ -461,11 +461,13 @@ function Brief({ onBegin, onAbout }: { onBegin: () => void; onAbout: () => void 
   ];
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.6 }}
-      className="absolute inset-0 z-20 flex items-center justify-center bg-[#040308] px-6"
-      role="dialog" aria-modal="true" aria-label="the night begins">
-      {/* a single warm light overhead */}
-      <div aria-hidden className="lamp-flicker pointer-events-none absolute left-1/2 top-0 h-[40vmin] w-[60vmin] -translate-x-1/2"
-        style={{ background: 'radial-gradient(ellipse 50% 80% at 50% 0%, color-mix(in oklab, #f4b258 40%, transparent), transparent 70%)' }} />
+      className="absolute inset-0 z-20 flex items-center justify-center px-6"
+      role="dialog" aria-modal="true" aria-label="the night begins"
+      style={{ background: 'linear-gradient(to bottom, rgba(6,5,12,0.28) 0%, rgba(5,4,10,0.58) 48%, rgba(4,3,8,0.88) 100%)' }}>
+      {/* the room itself shows through (full daylight, sun high) — the night has not started.
+          a soft text scrim keeps the copy readable over the window + lamp behind it. */}
+      <div aria-hidden className="pointer-events-none absolute inset-x-0 bottom-0 top-1/3"
+        style={{ background: 'radial-gradient(ellipse 70% 60% at 38% 72%, rgba(4,3,8,0.62), transparent 72%)' }} />
       <div className="relative flex w-full max-w-md flex-col gap-8">
         <div className="flex flex-col gap-4">
           {story.map((line, i) => (
