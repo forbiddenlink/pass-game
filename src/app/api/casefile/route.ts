@@ -26,8 +26,8 @@ export async function POST(req: Request) {
         believed: believed.toFixed(2),
       });
       return Response.json({ ...cf, source: 'gemini' });
-    } catch {
-      /* fall through */
+    } catch (e) {
+      console.error('[pass] casefile gemini failed, using offline:', String(e).slice(0, 300));
     }
   }
   return Response.json({ ...offlineCaseFile(outcome, believed), source: 'offline' });

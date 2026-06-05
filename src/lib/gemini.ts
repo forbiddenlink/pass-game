@@ -18,6 +18,13 @@ const asTheme = (t: string): ThemeTag =>
 
 const MODEL = 'gemini-2.5-flash';
 
+// Gemini 2.5 Flash runs "thinking" by default, which added 7-12s per call in
+// playtest — long enough that the interrogator beat reads as frozen. Disable it.
+// The judge task is tightly constrained by the schema + system prompt, so the
+// reasoning budget bought latency, not accuracy. Tuning knob: raise the judge's
+// budget if contradiction-catching regresses (it leans on recentTranscript).
+const NO_THINKING = { thinkingBudget: 0 } as const;
+
 export function geminiKey(): string | null {
   return (
     process.env.GEMINI_API_KEY ||
@@ -80,6 +87,7 @@ Judge how human the reply reads.`,
     config: {
       systemInstruction: JUDGE_SYSTEM,
       temperature: 0.1, // near-deterministic so a retested reply scores the same
+      thinkingConfig: NO_THINKING,
       responseMimeType: 'application/json',
       responseSchema: {
         type: Type.OBJECT,
@@ -116,7 +124,7 @@ export async function pressFollowup(input: { question: string; reply: string }):
         ],
       },
     ],
-    config: { systemInstruction: JUDGE_SYSTEM, temperature: 0.8, maxOutputTokens: 60 },
+    config: { systemInstruction: JUDGE_SYSTEM, temperature: 0.8, maxOutputTokens: 60, thinkingConfig: NO_THINKING },
   });
   const t = (res.text ?? '').trim();
   if (!t) throw new Error('gemini: empty follow-up');
@@ -149,6 +157,7 @@ export async function caseFile(input: { transcript: string; outcome: string; bel
         'You are a 1952 British intelligence analyst filing a terse case report after an interrogation. Clipped, bureaucratic, period-accurate, faintly chilling. No modern words. classification is 2-4 words (e.g. "INCONCLUSIVE", "MACHINE — TERMINATED", "HUMAN, PROBABLE"). note is one or two sentences citing something specific from the transcript. recommendation is one short clause.',
       temperature: 0.85,
       maxOutputTokens: 220,
+      thinkingConfig: NO_THINKING,
       responseMimeType: 'application/json',
       responseSchema: {
         type: Type.OBJECT,
@@ -189,6 +198,7 @@ export async function generateQuestion(input: {
     config: {
       systemInstruction: QUESTION_SYSTEM,
       temperature: 0.9, // questions want variety
+      thinkingConfig: NO_THINKING,
       responseMimeType: 'application/json',
       responseSchema: {
         type: Type.OBJECT,

@@ -14,6 +14,7 @@ const geistSans = Geist({ variable: "--font-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-mono", subsets: ["latin"] });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://pass-game-elizabeth-emersons-projects.vercel.app"),
   title: "PASS · a solstice interrogation",
   description:
     "Crack the interrogator's ciphers and answer human enough to be believed, before the solstice sun sets. An Alan Turing tribute. Judged live by Gemini.",

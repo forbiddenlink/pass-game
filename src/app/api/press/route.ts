@@ -22,8 +22,8 @@ export async function POST(req: Request) {
     try {
       const followup = await pressFollowup({ question, reply });
       return Response.json({ followup, source: 'gemini' });
-    } catch {
-      /* fall through */
+    } catch (e) {
+      console.error('[pass] press gemini failed, using offline:', String(e).slice(0, 300));
     }
   }
   return Response.json({ followup: pressLine(reply.length), source: 'offline' });

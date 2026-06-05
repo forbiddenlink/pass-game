@@ -22,8 +22,8 @@ export async function POST(req: Request) {
     try {
       const q = await generateQuestion({ theme: body.theme, difficulty: body.difficulty ?? 2 });
       return Response.json({ plaintext: q.plaintext, themeTag: q.themeTag, source: 'gemini' });
-    } catch {
-      /* fall through to offline */
+    } catch (e) {
+      console.error('[pass] question gemini failed, using offline:', String(e).slice(0, 300));
     }
   }
 

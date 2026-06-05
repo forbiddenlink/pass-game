@@ -697,6 +697,26 @@ function TypedDecode({ puzzle, hintUsed, onAttempt }: { puzzle: Puzzle; hintUsed
   );
 }
 
+/* ---------- the interrogator weighing you: an intentional wait beat ---------- */
+function Considering() {
+  const reduce = useReducedMotion();
+  return (
+    <div role="status" aria-label="the interrogator is considering your answer" className="flex items-center gap-3 py-1">
+      <span className="flex items-end gap-[3px]" aria-hidden>
+        {[0, 1, 2].map((i) => (
+          <motion.span
+            key={i}
+            className="h-1.5 w-1.5 rounded-full bg-ember"
+            animate={reduce ? { opacity: 0.6 } : { opacity: [0.2, 1, 0.2], y: [0, -2, 0] }}
+            transition={{ duration: 1.1, repeat: Infinity, delay: i * 0.18, ease: 'easeInOut' }}
+          />
+        ))}
+      </span>
+      <span className="text-[11px] uppercase tracking-[0.3em] text-ash">they weigh your answer</span>
+    </div>
+  );
+}
+
 function ReplyPanel({ question, pressing = false, loading = false, judging, onReply, onSkip }: { question: string; pressing?: boolean; loading?: boolean; judging: boolean; onReply: (t: string) => void; onSkip: () => void }) {
   const [val, setVal] = useState('');
   if (loading) {
@@ -719,7 +739,7 @@ function ReplyPanel({ question, pressing = false, loading = false, judging, onRe
       <textarea id="reply" name="reply" value={val} onChange={(e) => setVal(e.target.value)} disabled={judging} rows={2} aria-label="your reply"
         placeholder="say something a person would say…"
         className="resize-none rounded-sm bg-black/40 px-4 py-3 text-[15px] text-bone outline-none ring-1 ring-white/10 placeholder:text-ash/60 disabled:opacity-50" />
-      <TellMeter text={val} />
+      {judging ? <Considering /> : <TellMeter text={val} />}
       <div className="flex items-center gap-5">
         <button disabled={judging || !val.trim()} onClick={() => onReply(val)}
           className="inline-flex min-h-[44px] items-center justify-center rounded-sm bg-ember px-5 font-[family-name:var(--font-sans)] text-sm font-medium text-ink transition-colors hover:bg-[#ffb74d] disabled:bg-white/10 disabled:text-ash">
@@ -782,7 +802,7 @@ function EndingScreen({ state, nightLabel, caseNo, dossier, onReset, onAbout }: 
 
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={fade(1.9)} className="flex max-w-md flex-col gap-3 border-t border-white/10 pt-6">
         <p className="font-[family-name:var(--font-display)] text-[15px] italic leading-relaxed text-bone-dim">
-          The interrogation you survived is the test he invented. In 1952 he sat on the other side of it. He answered their questions honestly, and he was not believed.
+          {won ? 'The interrogation you survived' : 'The interrogation that put your light out'} is the test he invented. In 1952 he sat on the other side of it. He answered their questions honestly, and he was not believed.
         </p>
         <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={fade(3.0)} className="font-[family-name:var(--font-display)] text-[15px] italic leading-relaxed text-bone">
           You spent tonight as a machine, trying to pass. So did he.

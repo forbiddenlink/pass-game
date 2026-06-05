@@ -23,8 +23,10 @@ export async function POST(req: Request) {
     try {
       const v = await judgeReply({ question, reply, recentTranscript });
       return Response.json({ humanScore: v.human_score, tell: v.tell, line: v.line, contradiction: v.contradiction, source: 'gemini' });
-    } catch {
-      /* fall through to offline */
+    } catch (e) {
+      // Don't swallow silently: a 429 (quota) or bad key looks identical to a
+      // working offline demo otherwise. Logged server-side; player still gets a verdict.
+      console.error('[pass] judge gemini failed, using offline:', String(e).slice(0, 300));
     }
   }
 
