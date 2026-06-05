@@ -831,6 +831,13 @@ function EndingScreen({ state, nightLabel, caseNo, dossier, onReset, onAbout }: 
   return (
     <motion.section initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.8 }}
       className="flex flex-1 flex-col items-start justify-center gap-7 py-10">
+      {/* dawn actually breaks: a warm light climbs the whole room when you survive the night
+          (full-bleed, behind the play surface, slow rise — the payoff the dark scene withholds) */}
+      {won && (
+        <motion.div aria-hidden initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={fade(0.6)}
+          className="pointer-events-none fixed inset-0 -z-0"
+          style={{ background: 'radial-gradient(120% 80% at 50% 118%, rgba(245,179,88,0.30) 0%, rgba(224,123,56,0.12) 34%, transparent 64%)' }} />
+      )}
       {/* the horizon: a line of dawn if you survived, cold ash if you went dark */}
       <motion.div initial={{ scaleX: 0, opacity: 0 }} animate={{ scaleX: 1, opacity: 1 }} transition={fade(0.2)}
         className="h-[2px] w-full"
