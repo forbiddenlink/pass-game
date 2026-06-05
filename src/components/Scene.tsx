@@ -24,6 +24,9 @@ export default function Scene({
   const lampGlow = 0.5 + (1 - r) * 0.5;
   const vignette = Math.min(0.86, 0.3 + (1 - r) * 0.42 + suspicion * 0.22); // the room dies with the light
   const swaySpeed = 8 - suspicion * 4;
+  // the interrogator looms as doubt rises — rises off the chair and leans toward you
+  const loom = 1 + suspicion * 0.14;
+  const lean = suspicion * 3.2; // vmin of upward creep (closer = bigger + higher)
 
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 -z-0 overflow-hidden">
@@ -77,8 +80,10 @@ export default function Scene({
         ))}
       </div>
 
-      {/* the interrogator — a fedora silhouette across the table, rim-lit by the lamp */}
-      <div className="absolute bottom-0 left-1/2 h-[28vmin] w-[64vmin] -translate-x-1/2">
+      {/* the interrogator — a fedora silhouette across the table, rim-lit by the lamp.
+          looms toward you as their doubt rises (transform-only, cheap, reduced-motion safe) */}
+      <div className="absolute bottom-0 left-1/2 h-[28vmin] w-[64vmin]"
+        style={{ transform: `translateX(-50%) translateY(-${lean}vmin) scale(${loom})`, transformOrigin: 'bottom center', transition: 'transform 900ms ease-out' }}>
         <div className="absolute bottom-0 left-1/2 h-[13vmin] w-[46vmin] -translate-x-1/2 rounded-t-[48%] bg-[#030208]"
           style={{ boxShadow: `inset 0 2px 0 0 color-mix(in oklab, ${LAMP} 30%, transparent)` }} />
         <div className="absolute bottom-[10vmin] left-1/2 h-[11vmin] w-[11vmin] -translate-x-1/2 rounded-full bg-[#030208]"
