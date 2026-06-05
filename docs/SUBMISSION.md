@@ -1,6 +1,6 @@
-# PASS — a solstice interrogation
+# PASS · a solstice interrogation
 
-> Draft DEV post for the June Solstice Game Jam. Paste into DEV, then add: the cover image, the 60-90s demo video (with voiceover), the GitHub embed, and the live screenshots marked [SCREENSHOT]. House rule: no em dashes anywhere in this post.
+> Draft DEV post for the June Solstice Game Jam. Paste into DEV, then add: the cover image, the 60-90s demo video (voiceover optional, on-screen captions work fine), and the live screenshots marked [SCREENSHOT]. The GitHub embed and the dedication link are already filled in below. House rule: no em dashes anywhere in this post.
 
 *Play it: https://pass-game-elizabeth-emersons-projects.vercel.app*
 
@@ -46,13 +46,13 @@ Next.js 16, React 19, TypeScript, Tailwind. The interrogation room is CSS and SV
 ## Prize categories
 
 - **Best Ode to Alan Turing**: the imitation game as the core loop, cipher code-breaking, and a dedication earned by the whole premise.
-- **Best Google AI Usage**: Gemini is the interrogator and the judge, with structured output and an adaptive press. Remove it and there is no opponent.
+- **Best Google AI Usage**: Gemini does four jobs in this game, not one. It writes each night's questions (so no two nights interrogate you the same way), it judges how human your reply reads with structured output, it presses you with a sharper follow-up that remembers what you said three answers ago, and at dawn it files a case-file verdict on your whole performance. Remove it and there is no opponent, no questions, and no verdict.
 
 ## Play it and credits
 
 Live: https://pass-game-elizabeth-emersons-projects.vercel.app
-Code: [GITHUB EMBED]
+Code: {% embed https://github.com/forbiddenlink/pass-game %}
 
-For Alan Turing, 1912 to 1954. With thanks to the people who keep his memory honest. [link: a LGBTQ+ organization, e.g. GLAAD or Stonewall]
+For Alan Turing, 1912 to 1954. With thanks to the people who keep his memory honest, and to [Stonewall](https://www.stonewall.org.uk), who carry the work forward.
 
 Made for the June Solstice Game Jam. It is a jam entry and a sincere tribute at the same time, and I would rather say that plainly than pretend otherwise.
