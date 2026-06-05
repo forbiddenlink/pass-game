@@ -48,6 +48,17 @@ export interface GeminiVerdict {
   contradiction: string; // the earlier words this reply contradicts, or '' if none
 }
 
+// Two interrogators share the table. Which one speaks is driven by how much they
+// already doubt you (suspicion). The VOICE changes; the scoring rubric never does,
+// so the persona shapes tone + the spoken line, not how human your answer is judged.
+export type Persona = 'patient' | 'hard';
+const PERSONA_VOICE: Record<Persona, string> = {
+  patient: `You are MARGERY, the patient interrogator. Soft-spoken, almost kind, you give the subject room and sound like you genuinely want to believe them. Your menace is in the gentleness — you coax, you never raise your voice. Speak warmly even when unconvinced.`,
+  hard: `You are HOLT, the hard interrogator. Clipped, cold, openly hostile. You have already decided the subject is a machine and you are hunting the proof. No warmth, no patience. Speak in short, accusing sentences.`,
+};
+const personaSystem = (base: string, persona?: Persona) =>
+  persona ? `${PERSONA_VOICE[persona]}\n\n${base}` : base;
+
 const JUDGE_SYSTEM = `You are an interrogator in 1952, clipped, courteous, and quietly menacing.
 Your hidden task: decide whether the subject answering you is a machine imitating a human.
 Be STRICT and suspicious — most subjects ARE machines. Score how HUMAN the reply reads:
@@ -67,6 +78,7 @@ export async function judgeReply(input: {
   question: string;
   reply: string;
   recentTranscript?: string;
+  persona?: Persona;
 }): Promise<GeminiVerdict> {
   const ai = client();
   const res = await ai.models.generateContent({
@@ -85,7 +97,7 @@ Judge how human the reply reads.`,
       },
     ],
     config: {
-      systemInstruction: JUDGE_SYSTEM,
+      systemInstruction: personaSystem(JUDGE_SYSTEM, input.persona),
       temperature: 0.1, // near-deterministic so a retested reply scores the same
       thinkingConfig: NO_THINKING,
       responseMimeType: 'application/json',
@@ -113,7 +125,7 @@ const PRESS_SYSTEM = `You are a 1952 interrogator: clipped, courteous, quietly m
 Output ONE short spoken follow-up line and NOTHING else — no score, no labels, no JSON, no quotation marks, no "Line:" or "Tell:" prefix. Just the sentence you would say aloud.`;
 
 /** A probing follow-up that references the subject's weak reply. Throws on failure. */
-export async function pressFollowup(input: { question: string; reply: string; recentTranscript?: string }): Promise<string> {
+export async function pressFollowup(input: { question: string; reply: string; recentTranscript?: string; persona?: Persona }): Promise<string> {
   const ai = client();
   const res = await ai.models.generateContent({
     model: MODEL,
@@ -127,7 +139,7 @@ export async function pressFollowup(input: { question: string; reply: string; re
         ],
       },
     ],
-    config: { systemInstruction: PRESS_SYSTEM, temperature: 0.8, maxOutputTokens: 60, thinkingConfig: NO_THINKING },
+    config: { systemInstruction: personaSystem(PRESS_SYSTEM, input.persona), temperature: 0.8, maxOutputTokens: 60, thinkingConfig: NO_THINKING },
   });
   // Safety net: if the model still emits labels/quotes, keep only the first clean line.
   const raw = (res.text ?? '').trim();

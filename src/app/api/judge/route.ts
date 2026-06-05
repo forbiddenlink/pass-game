@@ -9,7 +9,7 @@ export const runtime = 'nodejs';
  * so the reply mechanic always works (key dead, quota out, demo build).
  */
 export async function POST(req: Request) {
-  let body: { question?: string; reply?: string; recentTranscript?: string } = {};
+  let body: { question?: string; reply?: string; recentTranscript?: string; persona?: 'patient' | 'hard' } = {};
   try {
     body = await req.json();
   } catch {
@@ -18,10 +18,11 @@ export async function POST(req: Request) {
   const reply = (body.reply ?? '').slice(0, 600); // sanitize length
   const question = (body.question ?? '').slice(0, 300);
   const recentTranscript = (body.recentTranscript ?? '').slice(0, 2000);
+  const persona = body.persona === 'hard' || body.persona === 'patient' ? body.persona : undefined;
 
   if (geminiEnabled()) {
     try {
-      const v = await judgeReply({ question, reply, recentTranscript });
+      const v = await judgeReply({ question, reply, recentTranscript, persona });
       return Response.json({ humanScore: v.human_score, tell: v.tell, line: v.line, contradiction: v.contradiction, source: 'gemini' });
     } catch (e) {
       // Don't swallow silently: a 429 (quota) or bad key looks identical to a

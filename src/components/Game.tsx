@@ -56,8 +56,17 @@ const HINT_LABEL: Record<string, string> = {
 };
 const shadow = '[text-shadow:0_1px_4px_rgba(8,6,12,0.92)]';
 
-type Verdict = { line: string; tell: string; good: boolean; humanScore: number; skip: boolean; question: string; replyText: string; contradiction: string };
+type Persona = 'patient' | 'hard';
+type Verdict = { line: string; tell: string; good: boolean; humanScore: number; skip: boolean; question: string; replyText: string; contradiction: string; persona: Persona };
 type Exchange = { q: string; a: string; line: string; press: boolean };
+
+// Two interrogators share the table. The hard one steps forward as their doubt rises;
+// the patient one holds the chair while you are still being given rope. Driven by
+// suspicion, so the shift is earned by how the night is going — not random.
+const HARD_AT = 0.45;
+const personaFor = (suspicion: number): Persona => (suspicion >= HARD_AT ? 'hard' : 'patient');
+const PERSONA_NAME: Record<Persona, string> = { patient: 'Margery', hard: 'Holt' };
+const PERSONA_ROLE: Record<Persona, string> = { patient: 'the patient one', hard: 'the hard one' };
 
 const PLAY_URL = 'pass-game-elizabeth-emersons-projects.vercel.app';
 const SAVE_KEY = 'pass:save:v1';
@@ -253,6 +262,7 @@ export default function Game() {
   }
   async function onReply(text: string) {
     const q = pressing ?? state.puzzle.plaintext;
+    const persona = personaFor(state.suspicion);
     const recentTranscript = transcript.slice(-5).map((e) => `They asked: "${e.q}" — the subject said: "${e.a}"`).join('\n');
     setJudging(true);
     let humanScore: number, tell: string, line: string, contradiction = '';
@@ -260,7 +270,7 @@ export default function Game() {
       const res = await fetch('/api/judge', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ question: q, reply: text, recentTranscript }),
+        body: JSON.stringify({ question: q, reply: text, recentTranscript, persona }),
       });
       const j = await res.json();
       humanScore = j.humanScore;
@@ -277,11 +287,11 @@ export default function Game() {
     const good = humanScore >= 0.45 && !contradiction;
     sound.verdict(good);
     if (contradiction) dread();
-    setVerdict({ line, tell, good, humanScore, skip: false, question: q, replyText: text, contradiction });
+    setVerdict({ line, tell, good, humanScore, skip: false, question: q, replyText: text, contradiction, persona });
   }
   function onSkip() {
     sound.verdict(false);
-    setVerdict({ line: interrogatorLine(0, state.turn), tell: '', good: false, humanScore: 0, skip: true, question: pressing ?? state.puzzle.plaintext, replyText: '', contradiction: '' });
+    setVerdict({ line: interrogatorLine(0, state.turn), tell: '', good: false, humanScore: 0, skip: true, question: pressing ?? state.puzzle.plaintext, replyText: '', contradiction: '', persona: personaFor(state.suspicion) });
   }
   async function resolveVerdict() {
     if (!verdict) return;
@@ -310,7 +320,7 @@ export default function Game() {
         const res = await fetch('/api/press', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ question: v.question, reply: v.replyText, recentTranscript: pressMemory }),
+          body: JSON.stringify({ question: v.question, reply: v.replyText, recentTranscript: pressMemory, persona: v.persona }),
         });
         const j = await res.json();
         setPressing(j.followup || pressLine(v.replyText.length));
@@ -611,7 +621,9 @@ function VerdictBeat({ verdict, onContinue, last }: { verdict: Verdict; onContin
           <p className="mt-1 text-[13px] italic leading-relaxed text-bone-dim">But a moment ago you said: &ldquo;{verdict.contradiction}&rdquo;</p>
         </div>
       )}
-      <Label>the interrogator</Label>
+      <p className={`text-[10px] font-medium uppercase tracking-[0.32em] ${verdict.persona === 'hard' ? 'text-[#d9483c]' : 'text-ember/80'}`}>
+        {PERSONA_NAME[verdict.persona]} · {PERSONA_ROLE[verdict.persona]}
+      </p>
       <Typewriter text={verdict.line} className="font-[family-name:var(--font-display)] text-xl italic leading-snug text-bone" />
       {verdict.tell && <p className="text-[12px] text-bone-dim">{verdict.tell}.</p>}
       <p className={`text-[11px] uppercase tracking-widest ${verdict.good ? 'text-ember' : 'text-ash'}`}>

@@ -9,7 +9,7 @@ export const runtime = 'nodejs';
  * the actual answer; offline falls back to a canned press. Never 500s.
  */
 export async function POST(req: Request) {
-  let body: { question?: string; reply?: string; recentTranscript?: string } = {};
+  let body: { question?: string; reply?: string; recentTranscript?: string; persona?: 'patient' | 'hard' } = {};
   try {
     body = await req.json();
   } catch {
@@ -18,10 +18,11 @@ export async function POST(req: Request) {
   const question = (body.question ?? '').slice(0, 300);
   const reply = (body.reply ?? '').slice(0, 600);
   const recentTranscript = (body.recentTranscript ?? '').slice(0, 2000);
+  const persona = body.persona === 'hard' || body.persona === 'patient' ? body.persona : undefined;
 
   if (geminiEnabled()) {
     try {
-      const followup = await pressFollowup({ question, reply, recentTranscript });
+      const followup = await pressFollowup({ question, reply, recentTranscript, persona });
       return Response.json({ followup, source: 'gemini' });
     } catch (e) {
       console.error('[pass] press gemini failed, using offline:', String(e).slice(0, 300));
