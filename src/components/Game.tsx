@@ -621,6 +621,42 @@ function Transcript({ items }: { items: Exchange[] }) {
   );
 }
 
+/* The two interrogators as ink busts, rim-lit by the lamp — same SVG/CSS noir
+   language as the room (no raster art). Holt is hard angles + a fedora; Margery
+   is softer, hair pinned up. Small, beside the name they speak under. */
+function Portrait({ persona }: { persona: Persona }) {
+  const ink = '#0d0b14';
+  const rim = persona === 'hard' ? 'rgba(228,86,72,0.85)' : 'rgba(247,196,118,0.85)';
+  const sw = 1.3;
+  return (
+    <svg viewBox="0 0 56 56" className="h-12 w-12 shrink-0 rounded-full ring-1 ring-white/15" aria-hidden
+      style={{ background: 'radial-gradient(circle at 50% 14%, rgba(244,178,88,0.16), rgba(6,5,12,0.9) 70%)' }}>
+      {persona === 'hard' ? (
+        <g fill={ink} stroke={rim} strokeWidth={sw} strokeLinejoin="round">
+          {/* square shoulders */}
+          <path d="M7 56 V49 Q7 40 18 38 H38 Q49 40 49 49 V56 Z" />
+          {/* head */}
+          <rect x="20.5" y="23" width="15" height="17.5" rx="4.5" />
+          {/* fedora crown + brim */}
+          <path d="M21.5 23 Q21.5 13.5 28 13.5 Q34.5 13.5 34.5 23 Z" />
+          <ellipse cx="28" cy="23" rx="16.5" ry="3.3" />
+        </g>
+      ) : (
+        <g fill={ink} stroke={rim} strokeWidth={sw} strokeLinejoin="round">
+          {/* soft shoulders */}
+          <path d="M11 56 V51 Q11 42 22 40 H34 Q45 42 45 51 V56 Z" />
+          {/* hair sweeping the head */}
+          <path d="M16.5 33 Q15.5 17.5 28 17.5 Q40.5 17.5 39.5 33 Q39 26 34.5 23.5 H21.5 Q17 26 16.5 33 Z" />
+          {/* pinned bun */}
+          <circle cx="28" cy="15" r="3.4" />
+          {/* face */}
+          <ellipse cx="28" cy="31" rx="7.2" ry="9.2" />
+        </g>
+      )}
+    </svg>
+  );
+}
+
 function VerdictBeat({ verdict, onContinue, last }: { verdict: Verdict; onContinue: () => void; last: boolean }) {
   return (
     <>
@@ -630,9 +666,12 @@ function VerdictBeat({ verdict, onContinue, last }: { verdict: Verdict; onContin
           <p className="mt-1 text-[13px] italic leading-relaxed text-bone-dim">But a moment ago you said: &ldquo;{verdict.contradiction}&rdquo;</p>
         </div>
       )}
-      <p className={`text-[10px] font-medium uppercase tracking-[0.32em] ${verdict.persona === 'hard' ? 'text-[#d9483c]' : 'text-ember/80'}`}>
-        {PERSONA_NAME[verdict.persona]} · {PERSONA_ROLE[verdict.persona]}
-      </p>
+      <div className="flex items-center gap-3">
+        <Portrait persona={verdict.persona} />
+        <span className={`text-[10px] font-medium uppercase tracking-[0.32em] ${verdict.persona === 'hard' ? 'text-[#d9483c]' : 'text-ember/80'}`}>
+          {PERSONA_NAME[verdict.persona]} · {PERSONA_ROLE[verdict.persona]}
+        </span>
+      </div>
       <Typewriter text={verdict.line} className="font-[family-name:var(--font-display)] text-xl italic leading-snug text-bone" />
       {verdict.tell && <p className="text-[12px] text-bone-dim">{verdict.tell}.</p>}
       <p className={`text-[11px] uppercase tracking-widest ${verdict.good ? 'text-ember' : 'text-ash'}`}>
