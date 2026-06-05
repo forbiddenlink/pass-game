@@ -11,7 +11,9 @@ import {
   skipReply,
   humanityAvg,
   type GameState,
+  type NextQuestion,
 } from '@/lib/game';
+import { pickQuestion, difficultyFor } from '@/lib/puzzle';
 import { decode } from '@/lib/cipher';
 import { scoreReply } from '@/lib/score';
 import { interrogatorLine, pressLine } from '@/lib/lines';
@@ -162,11 +164,61 @@ export default function Game() {
     }
   }, [state, transcript, dossier, brief, seed, nightLabel]);
 
+  // ---- Gemini-authored questions, prefetched a turn ahead so the latency hides
+  // behind the current decode + reply. The CIPHER is always built locally; only
+  // the question TEXT comes from Gemini. Falls back to the offline bank silently:
+  // we only inject when the route reports source 'gemini', otherwise the pure
+  // game core picks the same bank question it always would.
+  const nextQRef = useRef<{ turn: number; q: NextQuestion } | null>(null);
+  const prefetchingRef = useRef<number | null>(null);
+  async function prefetchNext(curTurn: number, suspicion: number) {
+    const target = curTurn + 1;
+    if (target >= state.econ.turns) return; // the final turn keeps its authored question
+    if (nextQRef.current?.turn === target || prefetchingRef.current === target) return;
+    prefetchingRef.current = target;
+    try {
+      const res = await fetch('/api/question', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          seed,
+          turn: target,
+          theme: pickQuestion(seed, target).theme,
+          difficulty: difficultyFor(target, suspicion),
+        }),
+      });
+      const j = await res.json();
+      if (j.source === 'gemini' && j.plaintext) {
+        nextQRef.current = { turn: target, q: { plaintext: j.plaintext, themeTag: j.themeTag } };
+      }
+    } catch {
+      /* offline / failed -> bank fallback handles the next turn */
+    } finally {
+      if (prefetchingRef.current === target) prefetchingRef.current = null;
+    }
+  }
+  /** Hand the prefetched question for `target` to the reducer, if it is ready. */
+  function takeNext(target: number): NextQuestion | undefined {
+    const held = nextQRef.current;
+    if (held?.turn === target) {
+      nextQRef.current = null;
+      return held.q;
+    }
+    return undefined;
+  }
+  // kick off the prefetch for the upcoming turn as soon as a new turn opens
+  useEffect(() => {
+    if (state.status !== 'playing' || brief) return;
+    prefetchNext(state.turn, state.suspicion);
+  }, [state.turn, state.status, brief]); // eslint-disable-line react-hooks/exhaustive-deps
+
   function begin() {
     const s = dailySeed();
     setSeed(s);
     setNightLabel(nightLabelFor());
     setState(createGame({ seed: s }));
+    nextQRef.current = null;
+    prefetchingRef.current = null;
     sound.init();
     sound.startDrone();
     setBrief(false);
@@ -175,6 +227,8 @@ export default function Game() {
     const s = seed + 1; // a fresh night on replay
     setSeed(s);
     setState(createGame({ seed: s }));
+    nextQRef.current = null;
+    prefetchingRef.current = null;
     setMessage('');
     setVerdict(null);
     setPressing(null);
@@ -231,7 +285,7 @@ export default function Game() {
     setMessage('');
     setTranscript((t) => [...t, { q: v.question, a: v.skip ? '— silence —' : v.replyText, line: v.line, press: wasPress }]);
 
-    const next = v.skip ? skipReply(state) : recordReply(state, v.humanScore);
+    const next = v.skip ? skipReply(state, takeNext(state.turn + 1)) : recordReply(state, v.humanScore);
     if (next.suspicion > state.suspicion + 0.001) dread(); // their doubt rises — the room reddens
     if (next.status !== 'playing') {
       setState(next);
@@ -244,11 +298,12 @@ export default function Game() {
       setState(next); // light + humanity recorded, phase still 'replying'
       setPressed(true);
       setPressing(''); // loading sentinel -> press panel shows "they lean in close…"
+      const pressMemory = transcript.slice(-5).map((e) => `They asked: "${e.q}" — the subject said: "${e.a}"`).join('\n');
       try {
         const res = await fetch('/api/press', {
           method: 'POST',
           headers: { 'content-type': 'application/json' },
-          body: JSON.stringify({ question: v.question, reply: v.replyText }),
+          body: JSON.stringify({ question: v.question, reply: v.replyText, recentTranscript: pressMemory }),
         });
         const j = await res.json();
         setPressing(j.followup || pressLine(v.replyText.length));
@@ -258,7 +313,7 @@ export default function Game() {
       return;
     }
     // otherwise the night moves on
-    setState(advance(next));
+    setState(advance(next, takeNext(next.turn + 1)));
     setPressing(null);
     setPressed(false);
   }

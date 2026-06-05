@@ -90,7 +90,7 @@ function cipherKindForTurn(turn: number): CipherKind {
 // Every substitution gets some pre-revealed letters now (cuts the grind); more later.
 const prefillFraction = (turn: number) => (turn >= 6 ? 0.4 : 0.25);
 
-function difficultyFor(turn: number, suspicion: number): number {
+export function difficultyFor(turn: number, suspicion: number): number {
   const base = turn <= 2 ? 1 : turn <= 5 ? 2 : turn <= 7 ? 3 : 4;
   return Math.min(5, base + (suspicion >= 0.6 ? 1 : 0));
 }
@@ -130,13 +130,16 @@ export interface BuildArgs {
   /** When Gemini is on, it supplies the question; we still build the cipher locally. */
   plaintext?: string;
   themeTag?: ThemeTag;
+  /** Length of the night — the last turn is the authored final question. Defaults to DEFAULT_ECON.turns. */
+  totalTurns?: number;
 }
 
 export function buildPuzzle(args: BuildArgs): Puzzle {
   const { seed, turn, suspicion } = args;
+  const totalTurns = args.totalTurns ?? 8;
   const picked = args.plaintext
     ? { text: normalize(args.plaintext), theme: (args.themeTag ?? 'identity') as ThemeTag }
-    : turn === 8
+    : turn >= totalTurns
       ? { text: FINAL_QUESTION, theme: 'identity' as ThemeTag } // the unanswerable last question
       : (() => {
           const q = pickQuestion(seed, turn);

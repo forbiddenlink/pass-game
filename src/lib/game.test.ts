@@ -3,12 +3,15 @@ import {
   createGame,
   attemptDecode,
   useHint,
+  recordReply,
+  advance,
   submitReply,
   skipReply,
   humanityAvg,
   DEFAULT_ECON,
   type GameState,
 } from './game';
+import { buildPuzzle } from './puzzle';
 
 const solve = (s: GameState) => attemptDecode(s, s.puzzle.plaintext);
 
@@ -117,6 +120,41 @@ describe('endings', () => {
     const s = playNight({ onReply: (st) => submitReply(st, 0.5) });
     expect(s.status).toBe('won');
     expect(s.ending).toBe('B');
+  });
+});
+
+describe('injected (Gemini-authored) next question', () => {
+  it('submitReply threads an injected question into the next puzzle', () => {
+    const base = solve(createGame({ seed: 1 }));
+    const s = submitReply(base, 0.9, { plaintext: 'what colour was the morning', themeTag: 'light' });
+    expect(s.turn).toBe(2);
+    expect(s.puzzle.plaintext).toBe('what colour was the morning');
+    expect(s.puzzle.themeTag).toBe('light');
+  });
+
+  it('without an injection the next puzzle falls back to the bank (unchanged behaviour)', () => {
+    const base = solve(createGame({ seed: 1 }));
+    const fallback = submitReply(base, 0.9);
+    const banked = buildPuzzle({ seed: 1, turn: 2, suspicion: fallback.suspicion });
+    expect(fallback.puzzle.plaintext).toBe(banked.plaintext);
+  });
+
+  it('skipReply also accepts an injected question', () => {
+    const base = solve(createGame({ seed: 1 }));
+    const s = skipReply(base, { plaintext: 'do you remember rain', themeTag: 'memory' });
+    expect(s.puzzle.plaintext).toBe('do you remember rain');
+  });
+
+  it('advance carries an injected question (the press-flow path)', () => {
+    const base = recordReply(solve(createGame({ seed: 1 })), 0.3);
+    const s = advance(base, { plaintext: 'say something true', themeTag: 'identity' });
+    expect(s.puzzle.plaintext).toBe('say something true');
+  });
+
+  it('the injected cipher is still built + verified locally (never trusted)', () => {
+    const base = solve(createGame({ seed: 1 }));
+    const s = submitReply(base, 0.9, { plaintext: 'tell me what you fear', themeTag: 'fear' });
+    expect(s.puzzle.ciphertext).not.toBe(s.puzzle.plaintext);
   });
 });
 

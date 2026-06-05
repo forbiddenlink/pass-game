@@ -11,7 +11,14 @@
  */
 
 import { normalize } from './cipher';
-import { buildPuzzle, type Puzzle } from './puzzle';
+import { buildPuzzle, type Puzzle, type ThemeTag } from './puzzle';
+
+/** A question authored elsewhere (e.g. Gemini) to use for the NEXT turn's puzzle.
+ *  The cipher is still built + verified locally in buildPuzzle — never trusted. */
+export interface NextQuestion {
+  plaintext: string;
+  themeTag: ThemeTag;
+}
 
 export interface Econ {
   start: number;
@@ -104,32 +111,41 @@ export function recordReply(s: GameState, humanScore: number): GameState {
   return { ...next, suspicion, humanity: { total: s.humanity.total + score, count: s.humanity.count + 1 } };
 }
 
-/** Move on to the next question (or finish). Safe to call from 'replying'. */
-export function advance(s: GameState): GameState {
+/** Move on to the next question (or finish). Safe to call from 'replying'.
+ *  `next` optionally supplies a Gemini-authored question for the upcoming turn. */
+export function advance(s: GameState, next?: NextQuestion): GameState {
   if (s.status !== 'playing') return s;
-  return advanceTurn(s);
+  return advanceTurn(s, next);
 }
 
 /** Record a reply and immediately advance — the common case (no press). */
-export function submitReply(s: GameState, humanScore: number): GameState {
+export function submitReply(s: GameState, humanScore: number, next?: NextQuestion): GameState {
   const r = recordReply(s, humanScore);
-  return r.phase === 'replying' && r.status === 'playing' ? advance(r) : r;
+  return r.phase === 'replying' && r.status === 'playing' ? advance(r, next) : r;
 }
 
-export function skipReply(s: GameState): GameState {
+export function skipReply(s: GameState, next?: NextQuestion): GameState {
   if (s.phase !== 'replying' || s.status !== 'playing') return s;
-  return advanceTurn({ ...s, suspicion: clamp01(s.suspicion + 0.05) });
+  return advanceTurn({ ...s, suspicion: clamp01(s.suspicion + 0.05) }, next);
 }
 
-function advanceTurn(s: GameState): GameState {
+function advanceTurn(s: GameState, next?: NextQuestion): GameState {
   if (s.turn >= s.econ.turns) return finish(s);
   const turn = s.turn + 1;
+  // The final turn always keeps the authored question — the client never injects there.
+  const inject = turn < s.econ.turns ? next : undefined;
   return {
     ...s,
     turn,
     phase: 'decoding',
     hintUsed: false,
-    puzzle: buildPuzzle({ seed: s.seed, turn, suspicion: s.suspicion }),
+    puzzle: buildPuzzle({
+      seed: s.seed,
+      turn,
+      suspicion: s.suspicion,
+      totalTurns: s.econ.turns,
+      ...(inject ? { plaintext: inject.plaintext, themeTag: inject.themeTag } : {}),
+    }),
   };
 }
 

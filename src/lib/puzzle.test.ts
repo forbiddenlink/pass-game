@@ -46,6 +46,20 @@ describe('buildPuzzle — every generated puzzle is solvable', () => {
     expect(p.plaintext).toBe('do you fear the dark');
     expect(roundTrips(p.plaintext, p.cipher)).toBe(true);
   });
+
+  it('the last turn is the authored unanswerable question (default 8 turns)', () => {
+    expect(buildPuzzle({ seed: 1, turn: 8, suspicion: 0 }).plaintext).toBe('if you could choose to feel pain would you');
+  });
+
+  it('the final question tracks totalTurns, not a hardcoded 8', () => {
+    const p = buildPuzzle({ seed: 1, turn: 5, suspicion: 0, totalTurns: 5 });
+    expect(p.plaintext).toBe('if you could choose to feel pain would you');
+  });
+
+  it('an injected plaintext still overrides on the final turn (client never injects there)', () => {
+    const p = buildPuzzle({ seed: 1, turn: 8, suspicion: 0, plaintext: 'what is your name' });
+    expect(p.plaintext).toBe('what is your name');
+  });
 });
 
 describe('cadence (interleaved so no long same-cipher run)', () => {

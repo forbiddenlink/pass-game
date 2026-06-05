@@ -109,8 +109,11 @@ Judge how human the reply reads.`,
   return parsed;
 }
 
+const PRESS_SYSTEM = `You are a 1952 interrogator: clipped, courteous, quietly menacing, probing whether the subject is a machine.
+Output ONE short spoken follow-up line and NOTHING else — no score, no labels, no JSON, no quotation marks, no "Line:" or "Tell:" prefix. Just the sentence you would say aloud.`;
+
 /** A probing follow-up that references the subject's weak reply. Throws on failure. */
-export async function pressFollowup(input: { question: string; reply: string }): Promise<string> {
+export async function pressFollowup(input: { question: string; reply: string; recentTranscript?: string }): Promise<string> {
   const ai = client();
   const res = await ai.models.generateContent({
     model: MODEL,
@@ -119,16 +122,22 @@ export async function pressFollowup(input: { question: string; reply: string }):
         role: 'user',
         parts: [
           {
-            text: `You asked: "${input.question}". The subject answered: "${input.reply}". That answer rings false / machine-like. Press them with ONE short follow-up (max 18 words) that challenges their specific answer and demands they sound human. In character, 1952 interrogator. Plain sentence, no quotes.`,
+            text: `${input.recentTranscript ? `Earlier in this interrogation:\n${input.recentTranscript}\n\n` : ''}You asked: "${input.question}". The subject answered: "${input.reply}". That answer rings false / machine-like. Press them with ONE short follow-up (max 18 words) that challenges their specific answer and demands they sound human. If their earlier answers give you a sharper thread to pull — a detail to test or a story to make them repeat — use it. In character, 1952 interrogator. Plain sentence, no quotes.`,
           },
         ],
       },
     ],
-    config: { systemInstruction: JUDGE_SYSTEM, temperature: 0.8, maxOutputTokens: 60, thinkingConfig: NO_THINKING },
+    config: { systemInstruction: PRESS_SYSTEM, temperature: 0.8, maxOutputTokens: 60, thinkingConfig: NO_THINKING },
   });
-  const t = (res.text ?? '').trim();
-  if (!t) throw new Error('gemini: empty follow-up');
-  return t.slice(0, 200);
+  // Safety net: if the model still emits labels/quotes, keep only the first clean line.
+  const raw = (res.text ?? '').trim();
+  const t = raw
+    .split('\n')
+    .map((l) => l.replace(/^(line|score|tell)\s*:\s*/i, '').trim())
+    .find((l) => l && !/^(score|tell)\s*:/i.test(l)) ?? raw;
+  const clean = t.replace(/^["“]|["”]$/g, '').trim();
+  if (!clean) throw new Error('gemini: empty follow-up');
+  return clean.slice(0, 200);
 }
 
 export interface CaseFile {
