@@ -341,7 +341,7 @@ export default function Game() {
                 </Panel>
               ) : state.phase === 'decoding' ? (
                 <Panel key={`d${state.turn}`} reduce={!!reduce}>
-                  <DecodePanel puzzle={state.puzzle} hintUsed={state.hintUsed} onAttempt={onAttempt} onHint={() => { sound.key(); setState(useHint(state)); }} />
+                  <DecodePanel puzzle={state.puzzle} hintUsed={state.hintUsed} coach={state.turn === 1} onAttempt={onAttempt} onHint={() => { sound.key(); setState(useHint(state)); }} />
                 </Panel>
               ) : (
                 <Panel key={pressing !== null ? `p${transcript.length}` : `r${state.turn}`} reduce={!!reduce}>
@@ -350,6 +350,7 @@ export default function Game() {
                     pressing={pressing !== null}
                     loading={pressing === ''}
                     judging={judging}
+                    coach={state.turn === 1 && pressing === null}
                     onReply={onReply}
                     onSkip={onSkip}
                   />
@@ -595,10 +596,15 @@ function VerdictBeat({ verdict, onContinue, last }: { verdict: Verdict; onContin
   );
 }
 
-function DecodePanel({ puzzle, hintUsed, onAttempt, onHint }: { puzzle: Puzzle; hintUsed: boolean; onAttempt: (g: string) => void; onHint: () => void }) {
+function DecodePanel({ puzzle, hintUsed, coach = false, onAttempt, onHint }: { puzzle: Puzzle; hintUsed: boolean; coach?: boolean; onAttempt: (g: string) => void; onHint: () => void }) {
   const [showLearn, setShowLearn] = useState(false);
   return (
     <>
+      {coach && (
+        <p className="rounded-sm border-l-2 border-ember/60 bg-ember/[0.06] px-3 py-2 text-[12px] leading-relaxed text-bone-dim">
+          <span className="font-medium text-ember">First, decode.</span> Their question came in scrambled. Turn the dial below until the line reads as real English, then confirm it. A wrong guess costs daylight, and daylight is your life.
+        </p>
+      )}
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between gap-3">
           <Label>intercept · {CIPHER_LABEL[puzzle.cipher.type]}</Label>
@@ -772,7 +778,7 @@ function Considering() {
   );
 }
 
-function ReplyPanel({ question, pressing = false, loading = false, judging, onReply, onSkip }: { question: string; pressing?: boolean; loading?: boolean; judging: boolean; onReply: (t: string) => void; onSkip: () => void }) {
+function ReplyPanel({ question, pressing = false, loading = false, judging, coach = false, onReply, onSkip }: { question: string; pressing?: boolean; loading?: boolean; judging: boolean; coach?: boolean; onReply: (t: string) => void; onSkip: () => void }) {
   const [val, setVal] = useState('');
   if (loading) {
     return (
@@ -784,6 +790,11 @@ function ReplyPanel({ question, pressing = false, loading = false, judging, onRe
   }
   return (
     <>
+      {coach && (
+        <p className="rounded-sm border-l-2 border-ember/60 bg-ember/[0.06] px-3 py-2 text-[12px] leading-relaxed text-bone-dim">
+          <span className="font-medium text-ember">Now answer.</span> The interrogator is a real AI, and it is deciding whether you sound human. Reply like a person would — short, specific, a little uncertain. Or stay silent: safe, but it tells them nothing and the doubt grows.
+        </p>
+      )}
       <Label>{pressing ? 'they press' : 'decoded · they ask'}</Label>
       {pressing ? (
         <Typewriter text={`“${question}”`} className="font-[family-name:var(--font-display)] text-2xl italic leading-snug text-ember" />
