@@ -85,6 +85,7 @@ export default function Game() {
   const [transcript, setTranscript] = useState<Exchange[]>([]);
   const [dossier, setDossier] = useState<{ classification: string; note: string; recommendation: string } | null>(null);
   const [muted, setMuted] = useState(false);
+  const [blackout, setBlackout] = useState(false); // the switch-off: a hard cut to dark when the light fails
   const reduce = useReducedMotion();
   const shake = useAnimationControls();
   const jolt = (i: number) => {
@@ -105,9 +106,15 @@ export default function Game() {
 
   useEffect(() => { sound.ambient(r); }, [r]);
   useEffect(() => {
-    if (state.status === 'lost') { sound.switchOff(); jolt(11); }
+    if (state.status === 'lost') {
+      sound.switchOff();
+      jolt(11);
+      setBlackout(true); // hard cut to dark; the verdict fades up behind it
+      const t = window.setTimeout(() => setBlackout(false), reduce ? 400 : 1500);
+      return () => window.clearTimeout(t);
+    }
     if (state.status === 'won') sound.verdict(true);
-  }, [state.status]);
+  }, [state.status]); // eslint-disable-line react-hooks/exhaustive-deps
   // when the night ends, the interrogator files a case-file verdict on your whole performance
   useEffect(() => {
     if (state.status === 'playing' || dossier) return;
@@ -369,6 +376,25 @@ export default function Game() {
 
       <AnimatePresence>{brief && <Brief onBegin={begin} onAbout={() => setAbout(true)} />}</AnimatePresence>
       <AnimatePresence>{about && <About onClose={() => setAbout(false)} />}</AnimatePresence>
+
+      {/* the switch-off: a CRT power-down when the light fails — hard snap to black,
+          a single collapsing scanline, then the dark lifts onto the verdict. */}
+      <AnimatePresence>
+        {blackout && (
+          <motion.div key="blackout" aria-hidden initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: reduce ? 0.2 : 0.12, ease: 'easeIn' }}
+            className="pointer-events-none fixed inset-0 z-[60] bg-black">
+            {!reduce && (
+              <motion.div
+                initial={{ scaleX: 1, opacity: 0 }}
+                animate={{ scaleX: [1, 1, 0.04], opacity: [0, 0.9, 0] }}
+                transition={{ duration: 0.55, times: [0, 0.25, 1], ease: 'easeOut', delay: 0.08 }}
+                className="absolute left-0 top-1/2 h-[2px] w-full -translate-y-1/2"
+                style={{ background: 'linear-gradient(90deg, transparent, #f4b258 35%, #fff6e0 50%, #f4b258 65%, transparent)', transformOrigin: 'center' }} />
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </main>
   );
 }
