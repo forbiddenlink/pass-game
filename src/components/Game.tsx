@@ -187,9 +187,14 @@ export default function Game() {
   // game core picks the same bank question it always would.
   const nextQRef = useRef<{ turn: number; q: NextQuestion } | null>(null);
   const prefetchingRef = useRef<number | null>(null);
+  // Once Gemini signals a rate limit, stop spending quota on the LUXURY call
+  // (question variety) and reserve what's left for the visible AI — the judge,
+  // the press, the contradiction, the case-file. The bank covers the questions.
+  const aiThrottledRef = useRef(false);
   async function prefetchNext(curTurn: number, suspicion: number) {
     const target = curTurn + 1;
     if (target >= state.econ.turns) return; // the final turn keeps its authored question
+    if (aiThrottledRef.current) return; // quota is tight; let the bank serve questions
     if (nextQRef.current?.turn === target || prefetchingRef.current === target) return;
     prefetchingRef.current = target;
     try {
@@ -204,6 +209,7 @@ export default function Game() {
         }),
       });
       const j = await res.json();
+      if (j.rateLimited) aiThrottledRef.current = true; // back off; conserve quota for the judge
       if (j.source === 'gemini' && j.plaintext) {
         nextQRef.current = { turn: target, q: { plaintext: j.plaintext, themeTag: j.themeTag } };
       }
@@ -235,6 +241,7 @@ export default function Game() {
     setState(createGame({ seed: s }));
     nextQRef.current = null;
     prefetchingRef.current = null;
+    aiThrottledRef.current = false;
     sound.init();
     sound.startDrone();
     setBrief(false);
@@ -245,6 +252,7 @@ export default function Game() {
     setState(createGame({ seed: s }));
     nextQRef.current = null;
     prefetchingRef.current = null;
+    aiThrottledRef.current = false;
     setMessage('');
     setVerdict(null);
     setPressing(null);
@@ -273,6 +281,7 @@ export default function Game() {
         body: JSON.stringify({ question: q, reply: text, recentTranscript, persona }),
       });
       const j = await res.json();
+      if (j.rateLimited) aiThrottledRef.current = true; // judge is rate-limited: stop prefetching questions
       humanScore = j.humanScore;
       tell = j.tell;
       line = j.line || interrogatorLine(j.humanScore, text.length);

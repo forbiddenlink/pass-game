@@ -20,6 +20,7 @@ export async function POST(req: Request) {
   const recentTranscript = (body.recentTranscript ?? '').slice(0, 2000);
   const persona = body.persona === 'hard' || body.persona === 'patient' ? body.persona : undefined;
 
+  let rateLimited = false;
   if (geminiEnabled()) {
     try {
       const v = await judgeReply({ question, reply, recentTranscript, persona });
@@ -27,10 +28,12 @@ export async function POST(req: Request) {
     } catch (e) {
       // Don't swallow silently: a 429 (quota) or bad key looks identical to a
       // working offline demo otherwise. Logged server-side; player still gets a verdict.
-      console.error('[pass] judge gemini failed, using offline:', String(e).slice(0, 300));
+      const msg = String(e);
+      rateLimited = msg.includes('429') || /quota|rate.?limit/i.test(msg);
+      console.error('[pass] judge gemini failed, using offline:', msg.slice(0, 300));
     }
   }
 
   const h = scoreReply(reply);
-  return Response.json({ humanScore: h.score, tell: h.tell, line: '', source: 'offline' });
+  return Response.json({ humanScore: h.score, tell: h.tell, line: '', source: 'offline', rateLimited });
 }

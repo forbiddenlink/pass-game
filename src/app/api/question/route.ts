@@ -18,15 +18,18 @@ export async function POST(req: Request) {
   const seed = body.seed ?? 1;
   const turn = body.turn ?? 1;
 
+  let rateLimited = false;
   if (geminiEnabled() && body.theme) {
     try {
       const q = await generateQuestion({ theme: body.theme, difficulty: body.difficulty ?? 2 });
       return Response.json({ plaintext: q.plaintext, themeTag: q.themeTag, source: 'gemini' });
     } catch (e) {
-      console.error('[pass] question gemini failed, using offline:', String(e).slice(0, 300));
+      const msg = String(e);
+      rateLimited = msg.includes('429') || /quota|rate.?limit/i.test(msg);
+      console.error('[pass] question gemini failed, using offline:', msg.slice(0, 300));
     }
   }
 
   const q = pickQuestion(seed, turn);
-  return Response.json({ plaintext: q.text, themeTag: q.theme, source: 'offline' });
+  return Response.json({ plaintext: q.text, themeTag: q.theme, source: 'offline', rateLimited });
 }
