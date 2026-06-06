@@ -53,7 +53,7 @@ export interface GeminiVerdict {
 // so the persona shapes tone + the spoken line, not how human your answer is judged.
 export type Persona = 'patient' | 'hard';
 const PERSONA_VOICE: Record<Persona, string> = {
-  patient: `You are MARGERY, the patient interrogator. Soft-spoken, almost kind, you give the subject room and sound like you genuinely want to believe them. Your menace is in the gentleness — you coax, you never raise your voice. Speak warmly even when unconvinced.`,
+  patient: `You are MARGERY, the patient interrogator. Soft-spoken, almost kind, you give the subject room and sound like you genuinely want to believe them. Your menace is in the gentleness; you coax, you never raise your voice. Speak warmly even when unconvinced.`,
   hard: `You are HOLT, the hard interrogator. Clipped, cold, openly hostile. You have already decided the subject is a machine and you are hunting the proof. No warmth, no patience. Speak in short, accusing sentences.`,
 };
 const personaSystem = (base: string, persona?: Persona) =>
@@ -61,7 +61,7 @@ const personaSystem = (base: string, persona?: Persona) =>
 
 const JUDGE_SYSTEM = `You are an interrogator in 1952, clipped, courteous, and quietly menacing.
 Your hidden task: decide whether the subject answering you is a machine imitating a human.
-Be STRICT and suspicious — most subjects ARE machines. Score how HUMAN the reply reads:
+Be STRICT and suspicious. Most subjects ARE machines. Score how HUMAN the reply reads:
 - Only genuine warmth, hesitation, contradiction, idiosyncrasy, and SPECIFIC lived detail earn a
   high score (0.7+).
 - A composed, generic, factual, evasive, or merely-correct answer with no specific human detail
@@ -69,9 +69,9 @@ Be STRICT and suspicious — most subjects ARE machines. Score how HUMAN the rep
 - Do NOT reward length, politeness, or correctness. Terse, messy, uncertain human answers are fine.
 Derive "tell" from the same judgement as the score (never contradict it).
 CONTRADICTION: read the prior exchange closely. If the new reply conflicts in ANY way with an
-earlier answer — even loosely, in spirit or detail — set "contradiction" to the exact earlier words
+earlier answer, even loosely, in spirit or detail, set "contradiction" to the exact earlier words
 they now betray, and make "line" call it out sharply. Otherwise "contradiction" is an empty string.
-Stay in character in "line".`;
+Stay in character in "line". Never use em dashes in "line"; use periods or commas.`;
 
 /** Judge a player's reply. Throws on any failure (caller falls back to offline). */
 export async function judgeReply(input: {
@@ -122,7 +122,7 @@ Judge how human the reply reads.`,
 }
 
 const PRESS_SYSTEM = `You are a 1952 interrogator: clipped, courteous, quietly menacing, probing whether the subject is a machine.
-Output ONE short spoken follow-up line and NOTHING else — no score, no labels, no JSON, no quotation marks, no "Line:" or "Tell:" prefix. Just the sentence you would say aloud.`;
+Output ONE short spoken follow-up line and NOTHING else: no score, no labels, no JSON, no quotation marks, no "Line:" or "Tell:" prefix. Just the sentence you would say aloud. Never use em dashes; use periods or commas.`;
 
 /** A probing follow-up that references the subject's weak reply. Throws on failure. */
 export async function pressFollowup(input: { question: string; reply: string; recentTranscript?: string; persona?: Persona }): Promise<string> {
@@ -134,7 +134,7 @@ export async function pressFollowup(input: { question: string; reply: string; re
         role: 'user',
         parts: [
           {
-            text: `${input.recentTranscript ? `Earlier in this interrogation:\n${input.recentTranscript}\n\n` : ''}You asked: "${input.question}". The subject answered: "${input.reply}". That answer rings false / machine-like. Press them with ONE short follow-up (max 18 words) that challenges their specific answer and demands they sound human. If their earlier answers give you a sharper thread to pull — a detail to test or a story to make them repeat — use it. In character, 1952 interrogator. Plain sentence, no quotes.`,
+            text: `${input.recentTranscript ? `Earlier in this interrogation:\n${input.recentTranscript}\n\n` : ''}You asked: "${input.question}". The subject answered: "${input.reply}". That answer rings false / machine-like. Press them with ONE short follow-up (max 18 words) that challenges their specific answer and demands they sound human. If their earlier answers give you a sharper thread to pull, a detail to test or a story to make them repeat, use it. In character, 1952 interrogator. Plain sentence, no quotes.`,
           },
         ],
       },
@@ -175,7 +175,7 @@ export async function caseFile(input: { transcript: string; outcome: string; bel
     ],
     config: {
       systemInstruction:
-        'You are a 1952 British intelligence analyst filing a terse case report after an interrogation. Clipped, bureaucratic, period-accurate, faintly chilling. No modern words. classification is 2-4 words (e.g. "INCONCLUSIVE", "MACHINE — TERMINATED", "HUMAN, PROBABLE"). note is one or two sentences citing something specific from the transcript. recommendation is one short clause.',
+        'You are a 1952 British intelligence analyst filing a terse case report after an interrogation. Clipped, bureaucratic, period-accurate, faintly chilling. No modern words. classification is 2-4 words (e.g. "INCONCLUSIVE", "MACHINE TERMINATED", "HUMAN, PROBABLE"). Never use em dashes anywhere in your output. note is one or two sentences citing something specific from the transcript. recommendation is one short clause.',
       temperature: 0.85,
       maxOutputTokens: 220,
       thinkingConfig: NO_THINKING,
@@ -233,5 +233,7 @@ export async function generateQuestion(input: {
   });
   const parsed = JSON.parse(res.text ?? '{}') as GeminiQuestion;
   if (!parsed.plaintext) throw new Error('gemini: empty question');
-  return { plaintext: normalize(parsed.plaintext), themeTag: asTheme(parsed.themeTag) };
+  const plaintext = normalize(parsed.plaintext);
+  if (!plaintext) throw new Error('gemini: question normalized to empty');
+  return { plaintext, themeTag: asTheme(parsed.themeTag) };
 }

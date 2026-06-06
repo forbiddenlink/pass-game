@@ -54,7 +54,7 @@ export function pressLine(salt = 0): string {
 export function offlineCaseFile(outcome: string, believed: number) {
   if (outcome === 'OFF')
     return {
-      classification: 'MACHINE — TERMINATED',
+      classification: 'MACHINE: TERMINATED',
       note: 'Subject could not hold a human account before the daylight expired. The answers grew thin under pressure.',
       recommendation: 'Closed. Switched off at dusk.',
     };

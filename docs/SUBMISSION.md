@@ -1,6 +1,6 @@
 # PASS · a solstice interrogation
 
-> Draft DEV post for the June Solstice Game Jam. Paste into DEV, then add: the cover image, the 60-90s demo video (voiceover optional, on-screen captions work fine), and the live screenshots marked [SCREENSHOT]. The GitHub embed and the dedication link are already filled in below. House rule: no em dashes anywhere in this post.
+> Draft DEV post for the June Solstice Game Jam. Assets are captured under `docs/screenshots/` and `out/`: upload `out/trailer.mp4` (the 50s demo) as the video, `docs/screenshots/cover-og.png` as the cover, and the two `[SCREENSHOT]` images below. The GitHub embed and the dedication link are already filled in. House rule: no em dashes anywhere in this post.
 
 *Play it: https://pass-game-elizabeth-emersons-projects.vercel.app*
 
@@ -10,7 +10,7 @@ To convince the interrogator I was human, I typed a small childhood memory. It r
 
 That is PASS: an Alan Turing tribute where you are the machine, cracking the interrogator's ciphers and answering well enough to pass as human, before the solstice sun finishes setting on you.
 
-[COVER GIF: the interrogator reading your reply and pressing back, then the sun sinking through the barred window]
+[COVER: docs/screenshots/cover-og.png · or a GIF of the interrogator reading your reply and the sun sinking through the barred window]
 
 ## What it is
 
@@ -32,12 +32,12 @@ The interrogator is Gemini 2.5 Flash with structured output. Two calls per excha
 
 The cipher lesson is the one I would tell another dev. LLMs are unreliable at character-level transforms, so I never trust an AI-supplied ciphertext. Gemini (or the offline bank) supplies a plaintext and a cipher *spec*; the cipher engine builds and verifies the ciphertext locally, and refuses to ship a puzzle unless `decode(encode(plain)) === plain`. The whole engine is test-first. There is also a full offline fallback (a question bank plus a heuristic judge), so the game plays start to finish with no API key. That is deliberate: a judge can play the submitted build even if my quota is gone.
 
-[SCREENSHOT: the cipher rotor mid-turn]
-[SCREENSHOT: the interrogation transcript building]
+[SCREENSHOT: docs/screenshots/cipher-rotor.png · the caesar rotor mid-decode]
+[SCREENSHOT: docs/screenshots/interrogation.png · Gemini reading the reply and filing its verdict]
 
 ## The Turing tribute, handled with care
 
-You play an unnamed machine the whole way. Only at the end does the game name the man it is for. I kept it to an allegory and a dedication, with no depiction of his prosecution or his death. The line is "inspired by the work of Alan Turing," not a claim to tell his story. The original 1950 imitation game was itself a test of passing, which is why the metaphor fits without being forced.
+You play an unnamed machine the whole way. Only at the end does the game name the man it is for. There is no dramatization of his prosecution or his death. An optional history panel states those facts plainly and cites its sources (Bletchley Park, Hodges, the 2025 Turing-test study), and leaves the cause of death unresolved, as the inquest did. The game itself stays an allegory and a dedication. It says "inspired by the work of Alan Turing," not that it tells his story. The original 1950 imitation game was itself a test of passing, which is why the metaphor fits without being forced.
 
 ## How it is built
 

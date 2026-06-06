@@ -70,6 +70,8 @@ const PERSONA_ROLE: Record<Persona, string> = { patient: 'the patient one', hard
 
 const PLAY_URL = 'pass-game-elizabeth-emersons-projects.vercel.app';
 const SAVE_KEY = 'pass:save:v1';
+const MUTE_KEY = 'pass:mute:v1';
+const SILENCE = 'silence';
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 function dailySeed() {
   const d = new Date();
@@ -152,6 +154,17 @@ export default function Game() {
 
   const lowLight = r < 0.28;
 
+  // restore the mute preference across reloads (the synth defaults to on)
+  useEffect(() => {
+    try {
+      if (localStorage.getItem(MUTE_KEY) === '1') {
+        setMuted(true);
+        sound.setMuted(true);
+      }
+    } catch {
+      /* storage unavailable — leave sound on */
+    }
+  }, []);
   // resume today's in-progress night across a reload (the biggest "lost progress" risk)
   useEffect(() => {
     try {
@@ -271,7 +284,7 @@ export default function Game() {
   async function onReply(text: string) {
     const q = pressing ?? state.puzzle.plaintext;
     const persona = personaFor(state.suspicion);
-    const recentTranscript = transcript.slice(-5).map((e) => `They asked: "${e.q}" — the subject said: "${e.a}"`).join('\n');
+    const recentTranscript = transcript.slice(-5).map((e) => `They asked: "${e.q}". The subject said: "${e.a}"`).join('\n');
     setJudging(true);
     let humanScore: number, tell: string, line: string, contradiction = '';
     try {
@@ -309,7 +322,7 @@ export default function Game() {
     sound.tick();
     setVerdict(null);
     setMessage('');
-    setTranscript((t) => [...t, { q: v.question, a: v.skip ? '— silence —' : v.replyText, line: v.line, press: wasPress }]);
+    setTranscript((t) => [...t, { q: v.question, a: v.skip ? SILENCE : v.replyText, line: v.line, press: wasPress }]);
 
     const next = v.skip ? skipReply(state, takeNext(state.turn + 1)) : recordReply(state, v.humanScore);
     if (next.suspicion > state.suspicion + 0.001) dread(); // their doubt rises — the room reddens
@@ -324,7 +337,7 @@ export default function Game() {
       setState(next); // light + humanity recorded, phase still 'replying'
       setPressed(true);
       setPressing(''); // loading sentinel -> press panel shows "they lean in close…"
-      const pressMemory = transcript.slice(-5).map((e) => `They asked: "${e.q}" — the subject said: "${e.a}"`).join('\n');
+      const pressMemory = transcript.slice(-5).map((e) => `They asked: "${e.q}". The subject said: "${e.a}"`).join('\n');
       try {
         const res = await fetch('/api/press', {
           method: 'POST',
@@ -355,7 +368,7 @@ export default function Game() {
 
       <div className="relative mx-auto flex min-h-[100dvh] max-w-2xl flex-col px-6 py-10 sm:py-14">
         <motion.div animate={shake} aria-hidden={brief} className={`flex w-full max-w-[34rem] flex-col gap-8 transition-opacity duration-500 ${brief ? 'pointer-events-none opacity-0' : 'opacity-100'}`}>
-          <Header state={state} r={r} muted={muted} lowLight={lowLight} onHelp={() => setBrief(true)} onMute={() => setMuted(sound.toggleMute())} />
+          <Header state={state} r={r} muted={muted} lowLight={lowLight} onHelp={() => setBrief(true)} onMute={() => { const m = sound.toggleMute(); setMuted(m); try { localStorage.setItem(MUTE_KEY, m ? '1' : '0'); } catch { /* non-fatal */ } }} />
 
           {state.status === 'playing' && transcript.length > 0 && <Transcript items={transcript} />}
 
@@ -613,7 +626,7 @@ function Transcript({ items }: { items: Exchange[] }) {
       {recent.map((e, i) => (
         <div key={i} className="flex flex-col gap-0.5 opacity-75">
           <p className="font-[family-name:var(--font-display)] text-[15px] italic leading-snug text-bone-dim">“{e.q}{e.press ? '' : '?'}”</p>
-          <p className="text-[13px] text-bone-dim/70">{e.a === '— silence —' ? <span className="italic text-ash">— silence —</span> : `“${e.a}”`}</p>
+          <p className="text-[13px] text-bone-dim/70">{e.a === SILENCE ? <span className="italic text-ash">silence</span> : `“${e.a}”`}</p>
           <p className="text-[12px] italic text-ember/70">{e.line}</p>
         </div>
       ))}
@@ -880,7 +893,7 @@ function ReplyPanel({ question, pressing = false, loading = false, judging, coac
     <>
       {coach && (
         <p className="rounded-sm border-l-2 border-ember/60 bg-ember/[0.06] px-3 py-2 text-[12px] leading-relaxed text-bone-dim">
-          <span className="font-medium text-ember">Now answer.</span> The interrogator is a real AI, and it is deciding whether you sound human. Reply like a person would — short, specific, a little uncertain. Or stay silent: safe, but it tells them nothing and the doubt grows.
+          <span className="font-medium text-ember">Now answer.</span> The interrogator is a real AI, and it is deciding whether you sound human. Reply like a person would: short, specific, a little uncertain. Or stay silent. That is safe, but it tells them nothing and the doubt grows.
         </p>
       )}
       <Label>{pressing ? 'they press' : 'decoded · they ask'}</Label>

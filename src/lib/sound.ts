@@ -34,6 +34,11 @@ export const sound = {
     if (master && ctx) master.gain.setTargetAtTime(muted ? 0 : 0.5, now(), 0.05);
     return muted;
   },
+  /** Restore a persisted mute preference; safe to call before init(). */
+  setMuted(m: boolean) {
+    muted = m;
+    if (master && ctx) master.gain.setTargetAtTime(muted ? 0 : 0.5, now(), 0.05);
+  },
 
   /** Ambient drone; call once, then ambient(ratio) to bend it as light fails. */
   startDrone() {
