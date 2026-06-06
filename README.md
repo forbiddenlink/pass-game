@@ -4,7 +4,7 @@ An Alan Turing tribute built for the June Solstice Game Jam. It is the longest d
 
 **Play it:** https://pass-game-elizabeth-emersons-projects.vercel.app
 
-![The interrogation room](docs/screenshots/interrogation.png)
+![The interrogation room](https://raw.githubusercontent.com/forbiddenlink/pass-game/main/docs/screenshots/interrogation.png)
 
 ## Quick start
 
