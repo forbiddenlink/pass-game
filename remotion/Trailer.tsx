@@ -55,6 +55,7 @@ const CipherScene: React.FC = () => {
     <Frame>
       <div style={{ fontFamily: MONO, fontSize: 18, letterSpacing: 6, textTransform: 'uppercase', color: ASH, marginBottom: 22, opacity: fade(f, 0, 180) }}>intercept · enciphered</div>
       <div style={{ fontFamily: MONO, fontSize: 36, letterSpacing: 4, color: EMBER, opacity: fade(f, 0, 180) }}>{text}</div>
+      <div style={{ fontStyle: 'italic', fontSize: 26, color: DIM, marginTop: 40, opacity: fade(f, 96, 180) }}>First, break the cipher.</div>
     </Frame>
   );
 };
@@ -68,8 +69,9 @@ const ExchangeScene: React.FC = () => {
         <div style={{ fontSize: 30, color: DIM, opacity: interpolate(f, [60, 80], [0, 1], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) }}>
           {typed('honestly... the dark is coming, and i am not ready.', f, 60)}
         </div>
-        <div style={{ fontFamily: MONO, fontSize: 16, letterSpacing: 5, textTransform: 'uppercase', color: ASH, opacity: fade(f, 190, 300) }}>the interrogator</div>
+        <div style={{ fontFamily: MONO, fontSize: 16, letterSpacing: 5, textTransform: 'uppercase', color: ASH, opacity: fade(f, 190, 300) }}>the interrogator · a real AI</div>
         <div style={{ fontStyle: 'italic', fontSize: 34, color: EMBER, opacity: fade(f, 200, 300) }}>{typed('I almost believe you.', f, 205, 2.4)}</div>
+        <div style={{ fontStyle: 'italic', fontSize: 26, color: DIM, marginTop: 14, opacity: fade(f, 250, 300) }}>Then answer, well enough to pass as human.</div>
       </div>
     </Frame>
   );
