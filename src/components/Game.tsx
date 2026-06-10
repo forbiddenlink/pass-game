@@ -20,6 +20,7 @@ import { interrogatorLine, pressLine } from '@/lib/lines';
 import { CIPHER_LEARN, interceptFor, ABOUT } from '@/lib/history';
 import { sound } from '@/lib/sound';
 import Scene from '@/components/Scene';
+import ShaderBackground from '@/components/ShaderBackground';
 import Rotor from '@/components/Rotor';
 import TellMeter from '@/components/TellMeter';
 import type { Puzzle } from '@/lib/puzzle';
@@ -360,6 +361,7 @@ export default function Game() {
   return (
     <main className="relative min-h-[100dvh] overflow-hidden"
       style={{ background: `linear-gradient(${skyTop} 0%, ${skyBot} 100%)`, transition: `background ${ease1200}` }}>
+      <ShaderBackground progress={r} suspicion={state.suspicion} skyTop={skyTop} skyBot={skyBot} sunCol={sunCol} />
       <Scene r={r} suspicion={state.suspicion} skyTop={skyTop} skyBot={skyBot} sunCol={sunCol} />
       <div aria-hidden className="pointer-events-none absolute inset-0 -z-0"
         style={{ background: 'linear-gradient(to bottom, rgba(6,5,10,.55) 0%, transparent 15%, transparent 60%, rgba(8,6,12,.7) 100%)' }} />
