@@ -17,13 +17,13 @@
   },
   "dependencies": {
     "@google/genai": "^2.8.0",
-    "@remotion/cli": "^4.0.473",
-    "@remotion/google-fonts": "^4.0.473",
+    "@remotion/cli": "^4.0.475",
+    "@remotion/google-fonts": "^4.0.475",
     "motion": "^12.40.0",
-    "next": "16.2.7",
+    "next": "16.2.9",
     "react": "19.2.7",
     "react-dom": "19.2.7",
-    "remotion": "^4.0.473"
+    "remotion": "^4.0.475"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -31,7 +31,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^10",
-    "eslint-config-next": "16.2.7",
+    "eslint-config-next": "16.2.9",
     "tailwindcss": "^4",
     "typescript": "^6",
     "vitest": "^4.1.8"
