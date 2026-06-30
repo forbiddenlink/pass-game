@@ -16,14 +16,14 @@
     "trailer:render": "remotion render remotion/index.ts Trailer out/trailer.mp4"
   },
   "dependencies": {
-    "@google/genai": "^2.8.0",
-    "@remotion/cli": "^4.0.481",
-    "@remotion/google-fonts": "^4.0.481",
+    "@google/genai": "^2.9.0",
+    "@remotion/cli": "^4.0.483",
+    "@remotion/google-fonts": "^4.0.483",
     "motion": "^12.40.0",
     "next": "16.2.9",
     "react": "19.2.7",
     "react-dom": "19.2.7",
-    "remotion": "^4.0.481"
+    "remotion": "^4.0.483"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
