@@ -84,6 +84,44 @@ export const sound = {
     if (good) chime([587.33, 880], 0.5);
     else chord([146.83, 155.56], 0.6); // minor-second dread
   },
+  /** The stamp coming down: a low, punchy impact under the verdict. */
+  thud() {
+    if (!ctx || !master) return;
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = 'sine';
+    o.frequency.setValueAtTime(165, now());
+    o.frequency.exponentialRampToValueAtTime(46, now() + 0.18);
+    g.gain.setValueAtTime(0.0001, now());
+    g.gain.linearRampToValueAtTime(0.42, now() + 0.008); // near-instant attack = the slam
+    g.gain.exponentialRampToValueAtTime(0.0001, now() + 0.34);
+    o.connect(g);
+    g.connect(master);
+    o.start();
+    o.stop(now() + 0.36);
+  },
+  /** The hard one takes the chair: a gritty downward scrape of wood on floor. */
+  chairScrape() {
+    if (!ctx || !master) return;
+    const o = ctx.createOscillator();
+    const lp = ctx.createBiquadFilter();
+    const g = ctx.createGain();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(240, now());
+    o.frequency.exponentialRampToValueAtTime(68, now() + 0.4);
+    lp.type = 'lowpass';
+    lp.frequency.setValueAtTime(820, now());
+    lp.frequency.exponentialRampToValueAtTime(180, now() + 0.4);
+    g.gain.setValueAtTime(0.0001, now());
+    g.gain.linearRampToValueAtTime(0.13, now() + 0.03);
+    g.gain.linearRampToValueAtTime(0.1, now() + 0.28);
+    g.gain.exponentialRampToValueAtTime(0.0001, now() + 0.45);
+    o.connect(lp);
+    lp.connect(g);
+    g.connect(master);
+    o.start();
+    o.stop(now() + 0.47);
+  },
   switchOff() {
     blip(120, 0.06, 0.25, 'sawtooth');
     if (drone && ctx) {
