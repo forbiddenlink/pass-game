@@ -109,6 +109,9 @@ export default function Game() {
     if (reduce) return;
     flash.start({ opacity: [0, 0.5, 0], transition: { duration: 0.8, ease: 'easeOut' } });
   };
+  // the persona swap: when the hard one takes the chair, the lamp cuts for a beat
+  const cut = useAnimationControls();
+  const lastPersonaRef = useRef<Persona>('patient');
 
   const r = clampR(state.daylight / state.econ.start);
   const skyTop = tri(r, '#1b3a5c', '#2a2540', '#080610');
@@ -152,6 +155,20 @@ export default function Game() {
     const id = window.setInterval(() => sound.clock(), period);
     return () => window.clearInterval(id);
   }, [r, state.status, brief]);
+
+  // persona swap as a discrete beat: the moment doubt crosses HARD_AT, Margery
+  // yields the chair to Holt — a chair-scrape and a hard cut of the lamp, not a
+  // smooth fade. Driven off suspicion so it lands exactly when the room turns.
+  useEffect(() => {
+    const p = personaFor(state.suspicion);
+    if (p !== lastPersonaRef.current) {
+      if (p === 'hard' && state.status === 'playing' && !brief) {
+        sound.chairScrape();
+        if (!reduce) cut.start({ opacity: [0, 1, 0], transition: { duration: 0.5, times: [0, 0.14, 1], ease: 'easeOut' } });
+      }
+      lastPersonaRef.current = p;
+    }
+  }, [state.suspicion, state.status, brief]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const lowLight = r < 0.28;
 
@@ -256,6 +273,7 @@ export default function Game() {
     nextQRef.current = null;
     prefetchingRef.current = null;
     aiThrottledRef.current = false;
+    lastPersonaRef.current = 'patient'; // re-arm the persona-swap beat for the new night
     sound.init();
     sound.startDrone();
     setBrief(false);
@@ -267,6 +285,7 @@ export default function Game() {
     nextQRef.current = null;
     prefetchingRef.current = null;
     aiThrottledRef.current = false;
+    lastPersonaRef.current = 'patient'; // re-arm the persona-swap beat for the new night
     setMessage('');
     setVerdict(null);
     setPressing(null);
@@ -367,6 +386,8 @@ export default function Game() {
         style={{ background: 'linear-gradient(to bottom, rgba(6,5,10,.55) 0%, transparent 15%, transparent 60%, rgba(8,6,12,.7) 100%)' }} />
       <motion.div aria-hidden initial={{ opacity: 0 }} animate={flash} className="pointer-events-none absolute inset-0 z-10"
         style={{ background: 'radial-gradient(ellipse at 50% 45%, transparent 30%, rgba(140,20,20,0.6) 100%)' }} />
+      {/* the lamp cuts when the hard one takes the chair */}
+      <motion.div aria-hidden initial={{ opacity: 0 }} animate={cut} className="pointer-events-none absolute inset-0 z-40 bg-[#05040a]" />
 
       <div className="relative mx-auto flex min-h-[100dvh] max-w-2xl flex-col px-6 py-10 sm:py-14">
         <motion.div animate={shake} aria-hidden={brief} className={`flex w-full max-w-[34rem] flex-col gap-8 transition-opacity duration-500 ${brief ? 'pointer-events-none opacity-0' : 'opacity-100'}`}>
@@ -391,6 +412,7 @@ export default function Game() {
                     pressing={pressing !== null}
                     loading={pressing === ''}
                     judging={judging}
+                    r={r}
                     coach={state.turn === 1 && pressing === null}
                     onReply={onReply}
                     onSkip={onSkip}
@@ -672,9 +694,38 @@ function Portrait({ persona }: { persona: Persona }) {
   );
 }
 
+// The verdict as a stamp coming down: a snap-scale slam + a thud, so a lie
+// landing or the truth clearing hits instead of fading. One ink stamp, angled,
+// in the language of the outcome — caught, believed, doubted, or silent.
+const STAMP: Record<'lie' | 'good' | 'doubt' | 'silence', { text: string; color: string }> = {
+  lie: { text: 'lie', color: '#d9483c' },
+  good: { text: 'believed', color: '#f0a338' },
+  doubt: { text: 'doubted', color: '#c8773c' },
+  silence: { text: 'silence', color: '#8a8194' },
+};
+
 function VerdictBeat({ verdict, onContinue, last }: { verdict: Verdict; onContinue: () => void; last: boolean }) {
+  const reduce = useReducedMotion();
+  const stamp = useAnimationControls();
+  const kind = verdict.contradiction ? 'lie' : verdict.skip ? 'silence' : verdict.good ? 'good' : 'doubt';
+  const { text: stampText, color: stampColor } = STAMP[kind];
+  useEffect(() => {
+    if (reduce) { stamp.set({ scale: 1, opacity: 1, rotate: -8 }); return; }
+    stamp.set({ scale: 2.6, opacity: 0, rotate: -19 });
+    stamp.start({
+      scale: [2.6, 0.9, 1], opacity: [0, 1, 1], rotate: [-19, -6, -8],
+      transition: { duration: 0.42, times: [0, 0.6, 1], ease: [0.2, 0.9, 0.25, 1] },
+    });
+    const t = window.setTimeout(() => sound.thud(), 190); // the ink meets the page
+    return () => window.clearTimeout(t);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <>
+      <motion.div aria-hidden animate={stamp} initial={false}
+        className="pointer-events-none absolute right-2 top-1 z-10 select-none rounded-[3px] border-2 px-2.5 py-0.5"
+        style={{ borderColor: stampColor, color: stampColor, transformOrigin: 'center', boxShadow: `0 0 18px -4px ${stampColor}` }}>
+        <span className="font-[family-name:var(--font-mono)] text-base font-bold uppercase tracking-[0.22em]">{stampText}</span>
+      </motion.div>
       {verdict.contradiction && (
         <div className="rounded-sm border border-[#a3302a]/50 bg-[#a3302a]/10 p-3">
           <p className="text-[10px] uppercase tracking-[0.3em] text-[#d9483c]">caught in a contradiction</p>
@@ -861,33 +912,64 @@ function TypedDecode({ puzzle, hintUsed, onAttempt }: { puzzle: Puzzle; hintUsed
   );
 }
 
-/* ---------- the interrogator weighing you: an intentional wait beat ---------- */
-function Considering() {
+/* ---------- the machine reading you: a CRT-search wait beat ----------
+   While Gemini decides (the judge) or writes the follow-up (the press), the
+   panel becomes a searching cathode tube: the room's own film grain, retimed to
+   the fetch window, under a scanline sweeping the read. Not a generic spinner —
+   the interrogator is running the tape back through the machine. */
+function CrtSearch({ label }: { label: string }) {
   const reduce = useReducedMotion();
   return (
-    <div role="status" aria-label="the interrogator is considering your answer" className="flex items-center gap-3 py-1">
-      <span className="flex items-end gap-[3px]" aria-hidden>
-        {[0, 1, 2].map((i) => (
-          <motion.span
-            key={i}
-            className="h-1.5 w-1.5 rounded-full bg-ember"
-            animate={reduce ? { opacity: 0.6 } : { opacity: [0.2, 1, 0.2], y: [0, -2, 0] }}
-            transition={{ duration: 1.1, repeat: Infinity, delay: i * 0.18, ease: 'easeInOut' }}
-          />
-        ))}
-      </span>
-      <span className="text-[11px] uppercase tracking-[0.3em] text-ash">they weigh your answer</span>
+    <div role="status" aria-label={label} className="relative overflow-hidden rounded-sm border border-white/10 bg-black/50 px-3 py-2.5">
+      <svg aria-hidden className="grain pointer-events-none absolute inset-[-10%] h-[120%] w-[120%] opacity-[0.11] mix-blend-screen">
+        <filter id="crt-noise"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch" /></filter>
+        <rect width="100%" height="100%" filter="url(#crt-noise)" />
+      </svg>
+      {!reduce && (
+        <motion.div aria-hidden className="pointer-events-none absolute inset-x-0 h-6"
+          style={{ background: 'linear-gradient(to bottom, transparent, rgba(240,163,56,0.20), transparent)' }}
+          initial={{ top: '-25%' }} animate={{ top: ['-25%', '125%'] }}
+          transition={{ duration: 1.15, repeat: Infinity, ease: 'linear' }} />
+      )}
+      <div className="relative flex items-center gap-3">
+        <motion.span aria-hidden className="font-[family-name:var(--font-mono)] text-[11px] leading-none text-ember"
+          animate={reduce ? { opacity: 0.7 } : { opacity: [0.35, 1, 0.35] }}
+          transition={{ duration: 1.1, repeat: Infinity, ease: 'easeInOut' }}>
+          ▮▮▮
+        </motion.span>
+        <span className="text-[11px] uppercase tracking-[0.3em] text-ash">{label}</span>
+      </div>
     </div>
   );
 }
 
-function ReplyPanel({ question, pressing = false, loading = false, judging, coach = false, onReply, onSkip }: { question: string; pressing?: boolean; loading?: boolean; judging: boolean; coach?: boolean; onReply: (t: string) => void; onSkip: () => void }) {
+/* ---------- the countdown pressure: how high the sun still sits ----------
+   Surfaces the daylight ratio as a legible tension gauge right where you compose
+   the answer — the sun sinking toward the horizon, reddening as it drops. */
+function SunGauge({ r }: { r: number }) {
+  const cy = 15 - r * 11; // 4 (high) → 15 (at the horizon)
+  const tint = tri(r, '#ffd98a', '#e07b38', '#7a3340');
+  const pct = Math.round(r * 100);
+  return (
+    <div className="flex items-center gap-3 px-0.5">
+      <svg viewBox="0 0 120 20" className="h-4 w-[92px] shrink-0" aria-hidden>
+        <line x1="2" y1="16.5" x2="118" y2="16.5" stroke="rgba(255,255,255,0.14)" strokeWidth="0.8" />
+        <circle cx="60" cy={cy} r="3.4" fill={tint} style={{ filter: `drop-shadow(0 0 4px ${tint})`, transition: 'cy 700ms ease-out, fill 1200ms ease-out' }} />
+      </svg>
+      <span className="flex-1 font-[family-name:var(--font-mono)] text-[10px] uppercase tracking-widest text-ash" aria-label={`daylight ${pct} percent, ${PHASE_NAME(r)}`}>
+        <span style={{ color: tint, transition: 'color 1200ms ease-out' }}>{PHASE_NAME(r)}</span> · {pct}% light
+      </span>
+    </div>
+  );
+}
+
+function ReplyPanel({ question, pressing = false, loading = false, judging, r, coach = false, onReply, onSkip }: { question: string; pressing?: boolean; loading?: boolean; judging: boolean; r: number; coach?: boolean; onReply: (t: string) => void; onSkip: () => void }) {
   const [val, setVal] = useState('');
   if (loading) {
     return (
       <>
         <Label>they lean in close</Label>
-        <p className="font-[family-name:var(--font-display)] text-xl italic text-bone-dim">…</p>
+        <CrtSearch label="they run the tape back" />
       </>
     );
   }
@@ -908,7 +990,8 @@ function ReplyPanel({ question, pressing = false, loading = false, judging, coac
       <textarea id="reply" name="reply" value={val} onChange={(e) => setVal(e.target.value)} disabled={judging} rows={2} aria-label="your reply"
         placeholder="say something a person would say…"
         className="resize-none rounded-sm bg-black/40 px-4 py-3 text-[15px] text-bone outline-none ring-1 ring-white/10 placeholder:text-ash/60 disabled:opacity-50" />
-      {judging ? <Considering /> : <TellMeter text={val} />}
+      <SunGauge r={r} />
+      {judging ? <CrtSearch label="they weigh your answer" /> : <TellMeter text={val} />}
       <div className="flex items-center gap-5">
         <button disabled={judging || !val.trim()} onClick={() => onReply(val)}
           className="inline-flex min-h-[44px] items-center justify-center rounded-sm bg-ember px-5 font-[family-name:var(--font-sans)] text-sm font-medium text-ink transition-colors hover:bg-[#ffb74d] disabled:bg-white/10 disabled:text-ash">
