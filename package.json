@@ -16,14 +16,14 @@
     "trailer:render": "remotion render remotion/index.ts Trailer out/trailer.mp4"
   },
   "dependencies": {
-    "@google/genai": "^2.15.0",
-    "@remotion/cli": "^4.0.506",
-    "@remotion/google-fonts": "^4.0.506",
+    "@google/genai": "^2.17.1",
+    "@remotion/cli": "^4.0.514",
+    "@remotion/google-fonts": "^4.0.514",
     "motion": "^12.43.0",
-    "next": "16.2.12",
+    "next": "16.3.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "remotion": "^4.0.506"
+    "remotion": "^4.0.514"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -31,10 +31,10 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^10",
-    "eslint-config-next": "16.2.12",
+    "eslint-config-next": "16.3.1",
     "tailwindcss": "^4",
     "typescript": "^7",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   },
   "pnpm": {
     "overrides": {
