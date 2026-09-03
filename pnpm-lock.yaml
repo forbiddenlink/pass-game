@@ -16,7 +16,7 @@ importers:
         version: 4.0.520(@swc/helpers@0.5.23)(lightningcss@1.33.0)(postcss@8.5.26)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@8.1.1)(typescript@7.0.2)
       '@remotion/google-fonts':
         specifier: ^4.0.518
-        version: 4.0.518(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+        version: 4.0.520(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       motion:
         specifier: ^12.43.0
         version: 12.43.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -771,8 +771,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@remotion/google-fonts@4.0.518':
-    resolution: {integrity: sha512-qGgpmlsETtZkbJaLOXA51T8qn9soCM+MqyhOx2oQ0xwdV7m089mzvMwSPdqeO8e7PeqiMRrVQm2Zvnv/cWmRKA==}
+  '@remotion/google-fonts@4.0.520':
+    resolution: {integrity: sha512-IsvJNtTk617//pI9RxzMxSidLIrVY8r8uv7SLGX+PCOZNb5WR02mBjGURvlHuGPzMFXV2sosKNwAtXzeBmN7fw==}
 
   '@remotion/licensing@4.0.520':
     resolution: {integrity: sha512-u3IBwLv6Zgqa0WnI7suRNnI3lJ4dnIKghRPm6EwEOQ/PiBQWmX2UgTzJT8W7ddXGRFNM0CB6J+sJu+GPnZH9Yw==}
@@ -4300,9 +4300,9 @@ snapshots:
   '@remotion/compositor-win32-x64-msvc@4.0.520':
     optional: true
 
-  '@remotion/google-fonts@4.0.518(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+  '@remotion/google-fonts@4.0.520(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
     dependencies:
-      remotion: 4.0.518(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      remotion: 4.0.520(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
     transitivePeerDependencies:
       - react
       - react-dom
