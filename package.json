@@ -20,7 +20,7 @@
     "@remotion/cli": "^4.0.518",
     "@remotion/google-fonts": "^4.0.518",
     "motion": "^12.43.0",
-    "next": "16.3.3",
+    "next": "16.3.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",
     "remotion": "^4.0.518"
