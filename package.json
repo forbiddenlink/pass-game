@@ -27,15 +27,15 @@
     "remotion": "^4.0.518"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^26",
+    "@tailwindcss/postcss": "4.3.3",
+    "@types/node": "26.2.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^10",
+    "eslint": "10.9.1",
     "eslint-config-next": "16.3.4",
-    "tailwindcss": "^4",
-    "typescript": "^7",
-    "vitest": "^4.1.11"
+    "tailwindcss": "4.3.3",
+    "typescript": "7.0.2",
+    "vitest": "4.1.11"
   },
   "pnpm": {
     "overrides": {
