@@ -17,7 +17,7 @@
     "trailer:render": "remotion render remotion/index.ts Trailer out/trailer.mp4"
   },
   "dependencies": {
-    "@google/genai": "^2.18.0",
+    "@google/genai": "^2.19.0",
     "@remotion/cli": "^4.0.518",
     "@remotion/google-fonts": "^4.0.518",
     "motion": "^12.43.0",
