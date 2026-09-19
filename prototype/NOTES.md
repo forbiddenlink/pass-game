@@ -1,17 +1,17 @@
-# Prototype verdict — night-loop
+# Prototype verdict: night-loop
 
 **Question:** Does the de-risked PASS night loop feel fun? (objective daylight fail state +
 decode-as-spine + optional human-reply for score, AI-judge removed from the kill path.)
 
 **Run:** `pnpm prototype` (or `node prototype/night-loop.prototype.mjs`)
 
-**Verdict (2026-06-03, via `node prototype/sim.mjs` — readline pipe-race made
+**Verdict (2026-06-03, via `node prototype/sim.mjs`; readline pipe-race made
 multi-turn interactive auto-testing unreliable, so a pure-economy sim drives it):**
 
-**YES — the de-risked loop has a real game in it, AFTER one fix.**
+**YES, the de-risked loop has a real game in it, AFTER one fix.**
 
 The fix the prototype forced: in the first draft, replies cost ZERO daylight, so
-replying was free upside and skipping was never a real choice — the "optional reply"
+replying was free upside and skipping was never a real choice: the "optional reply"
 was fake and the soul mechanic was dead weight. **Fix: replies cost daylight too.**
 Now daylight is a currency spent on SURVIVAL (decode) vs IDENTITY (reply). That is
 the game's central decision, every turn.
@@ -25,9 +25,9 @@ Conclusion: you cannot both fumble decodes AND reply every turn; death is object
 the reply decision is genuine. **Greenlight the build.**
 
 Open knobs for real-build playtest:
-- Heuristic scorer barely separates robotic (0.68) from human (0.89) — the real Gemini
+- Heuristic scorer barely separates robotic (0.68) from human (0.89); the real Gemini
   judge must discriminate harder, or raise Ending-A threshold to ~0.75.
-- "be believed" survives at exactly 10 — one decode miss = death while replying all.
+- "be believed" survives at exactly 10: one decode miss = death while replying all.
   Consider START≈110 or reply cost 6 so skilled play has a little slack.
 - 5 turns felt right for a sim; confirm against the 4-6 min target with real decode UX.
 
