@@ -5,7 +5,7 @@ and you are a machine being questioned. Decode each enciphered question, answer 
 to pass as human, and reach dawn before the solstice sun sets on you. Gemini writes the
 questions, judges how human you sound, and presses you when you ring false.
 
-Live: https://pass-game-elizabeth-emersons-projects.vercel.app
+Live: https://pass-game-six.vercel.app
 
 ## Stack
 

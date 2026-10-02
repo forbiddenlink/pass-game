@@ -14,6 +14,7 @@
 import { encode, makeSubstitution, roundTrips, normalize, type CipherSpec } from './cipher';
 
 export type ThemeTag = 'light' | 'time' | 'memory' | 'fear' | 'identity';
+export const THEME_TAGS: readonly ThemeTag[] = ['light', 'time', 'memory', 'fear', 'identity'];
 
 export interface Puzzle {
   turn: number;

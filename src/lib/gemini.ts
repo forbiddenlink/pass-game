@@ -10,11 +10,10 @@
 
 import { GoogleGenAI, Type } from '@google/genai';
 import { normalize } from './cipher';
-import type { ThemeTag } from './puzzle';
+import { THEME_TAGS, type ThemeTag } from './puzzle';
 
-const THEME_TAGS: ThemeTag[] = ['light', 'time', 'memory', 'fear', 'identity'];
 const asTheme = (t: string): ThemeTag =>
-  (THEME_TAGS as string[]).includes(t) ? (t as ThemeTag) : 'identity';
+  (THEME_TAGS as readonly string[]).includes(t) ? (t as ThemeTag) : 'identity';
 
 const MODEL = 'gemini-2.5-flash';
 
@@ -99,6 +98,7 @@ Judge how human the reply reads.`,
     config: {
       systemInstruction: personaSystem(JUDGE_SYSTEM, input.persona),
       temperature: 0.1, // near-deterministic so a retested reply scores the same
+      maxOutputTokens: 300, // tell + line + contradiction are a sentence each; bounds cost per call
       thinkingConfig: NO_THINKING,
       responseMimeType: 'application/json',
       responseSchema: {
@@ -219,6 +219,7 @@ export async function generateQuestion(input: {
     config: {
       systemInstruction: QUESTION_SYSTEM,
       temperature: 0.9, // questions want variety
+      maxOutputTokens: 80, // one 6-10 word question plus the theme tag
       thinkingConfig: NO_THINKING,
       responseMimeType: 'application/json',
       responseSchema: {

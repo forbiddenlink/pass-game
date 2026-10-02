@@ -1,27 +1,29 @@
 import { caseFile, geminiEnabled } from '@/lib/gemini';
 import { offlineCaseFile } from '@/lib/lines';
+import { forbiddenResponse, guardAiRequest } from '@/lib/guard';
+import { ending, num, readBody, text } from '@/lib/validate';
 
 export const runtime = 'nodejs';
 
 /**
- * POST { transcript, outcome, believed } -> { classification, note, recommendation, source }
+ * POST { transcript, outcome, believed } -> { classification, note, recommendation, source, rateLimited? }
  * A noir case-file verdict on the whole night. Gemini writes it from the
- * transcript; offline falls back to a templated verdict. Never 500s.
+ * transcript; offline (or a guard refusal) falls back to a templated verdict.
+ * Never 500s.
  */
 export async function POST(req: Request) {
-  let body: { transcript?: string; outcome?: string; believed?: number } = {};
-  try {
-    body = await req.json();
-  } catch {
-    /* offline fallback */
-  }
-  const outcome = (body.outcome ?? 'OFF').slice(0, 8);
-  const believed = typeof body.believed === 'number' ? body.believed : 0;
+  const gate = guardAiRequest(req);
+  if (gate.status === 'forbidden') return forbiddenResponse();
 
-  if (geminiEnabled()) {
+  const body = await readBody(req);
+  const outcome = ending(body.outcome);
+  const believed = num(body.believed, 0, 1, 0);
+  const rateLimited = gate.status === 'limited';
+
+  if (!rateLimited && geminiEnabled()) {
     try {
       const cf = await caseFile({
-        transcript: (body.transcript ?? '').slice(0, 4000),
+        transcript: text(body.transcript, 4000),
         outcome,
         believed: believed.toFixed(2),
       });
@@ -30,5 +32,5 @@ export async function POST(req: Request) {
       console.error('[pass] casefile gemini failed, using offline:', String(e).slice(0, 300));
     }
   }
-  return Response.json({ ...offlineCaseFile(outcome, believed), source: 'offline' });
+  return Response.json({ ...offlineCaseFile(outcome, believed), source: 'offline', rateLimited });
 }

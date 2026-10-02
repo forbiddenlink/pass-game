@@ -1,27 +1,28 @@
 import { judgeReply, geminiEnabled } from '@/lib/gemini';
 import { scoreReply } from '@/lib/score';
+import { forbiddenResponse, guardAiRequest } from '@/lib/guard';
+import { persona as asPersona, readBody, text } from '@/lib/validate';
 
 export const runtime = 'nodejs';
 
 /**
- * POST { question, reply, recentTranscript? } -> { humanScore, tell, line, source }
- * Gemini is the interrogator; on ANY failure we fall back to the offline scorer
- * so the reply mechanic always works (key dead, quota out, demo build).
+ * POST { question, reply, recentTranscript? } -> { humanScore, tell, line, source, rateLimited? }
+ * Gemini is the interrogator; on ANY failure, or when the guard refuses (rate
+ * limit, kill switch), we fall back to the offline scorer so the reply mechanic
+ * always works. A guard refusal sets rateLimited so the client stops prefetching.
  */
 export async function POST(req: Request) {
-  let body: { question?: string; reply?: string; recentTranscript?: string; persona?: 'patient' | 'hard' } = {};
-  try {
-    body = await req.json();
-  } catch {
-    /* empty body -> treated as a skip */
-  }
-  const reply = (body.reply ?? '').slice(0, 600); // sanitize length
-  const question = (body.question ?? '').slice(0, 300);
-  const recentTranscript = (body.recentTranscript ?? '').slice(0, 2000);
-  const persona = body.persona === 'hard' || body.persona === 'patient' ? body.persona : undefined;
+  const gate = guardAiRequest(req);
+  if (gate.status === 'forbidden') return forbiddenResponse();
 
-  let rateLimited = false;
-  if (geminiEnabled()) {
+  const body = await readBody(req);
+  const reply = text(body.reply, 600);
+  const question = text(body.question, 300);
+  const recentTranscript = text(body.recentTranscript, 2000);
+  const persona = asPersona(body.persona);
+
+  let rateLimited = gate.status === 'limited';
+  if (!rateLimited && geminiEnabled()) {
     try {
       const v = await judgeReply({ question, reply, recentTranscript, persona });
       return Response.json({ humanScore: v.human_score, tell: v.tell, line: v.line, contradiction: v.contradiction, source: 'gemini' });

@@ -2,7 +2,7 @@
 
 An Alan Turing tribute built for the June Solstice Game Jam. It is the longest day of 1952 and you are a machine brought in to be questioned. Decode each enciphered question, answer well enough to pass as human, and reach dawn before the solstice sun finishes setting on you. A real AI (Google Gemini) writes the questions, judges how human you sound, and presses you when you ring false.
 
-**Play it:** https://pass-game-elizabeth-emersons-projects.vercel.app
+**Play it:** https://pass-game-six.vercel.app
 
 ![The interrogation room](https://raw.githubusercontent.com/forbiddenlink/pass-game/main/docs/screenshots/interrogation.png)
 
