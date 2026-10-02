@@ -69,7 +69,7 @@ const personaFor = (suspicion: number): Persona => (suspicion >= HARD_AT ? 'hard
 const PERSONA_NAME: Record<Persona, string> = { patient: 'Margery', hard: 'Holt' };
 const PERSONA_ROLE: Record<Persona, string> = { patient: 'the patient one', hard: 'the hard one' };
 
-const PLAY_URL = 'pass-game-elizabeth-emersons-projects.vercel.app';
+const PLAY_URL = 'pass-game-six.vercel.app';
 const SAVE_KEY = 'pass:save:v1';
 const MUTE_KEY = 'pass:mute:v1';
 const SILENCE = 'silence';
@@ -141,6 +141,7 @@ export default function Game() {
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ transcript: t, outcome: state.ending, believed: humanityAvg(state) }),
         });
+        if (!res.ok) throw new Error(`casefile ${res.status}`);
         const j = await res.json();
         setDossier({ classification: j.classification, note: j.note, recommendation: j.recommendation });
       } catch {
@@ -239,6 +240,7 @@ export default function Game() {
           difficulty: difficultyFor(target, suspicion),
         }),
       });
+      if (!res.ok) throw new Error(`question ${res.status}`);
       const j = await res.json();
       if (j.rateLimited) aiThrottledRef.current = true; // back off; conserve quota for the judge
       if (j.source === 'gemini' && j.plaintext) {
@@ -313,7 +315,11 @@ export default function Game() {
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ question: q, reply: text, recentTranscript, persona }),
       });
+      // A non-2xx (403 cross-site, platform error page) or a body without a score
+      // must not read as a score of undefined; throw into the offline scorer below.
+      if (!res.ok) throw new Error(`judge ${res.status}`);
       const j = await res.json();
+      if (typeof j.humanScore !== 'number') throw new Error('judge: no score');
       if (j.rateLimited) aiThrottledRef.current = true; // judge is rate-limited: stop prefetching questions
       humanScore = j.humanScore;
       tell = j.tell;
@@ -364,6 +370,7 @@ export default function Game() {
           headers: { 'content-type': 'application/json' },
           body: JSON.stringify({ question: v.question, reply: v.replyText, recentTranscript: pressMemory, persona: v.persona }),
         });
+        if (!res.ok) throw new Error(`press ${res.status}`);
         const j = await res.json();
         setPressing(j.followup || pressLine(v.replyText.length));
       } catch {
@@ -456,8 +463,11 @@ export default function Game() {
 }
 
 function About({ onClose }: { onClose: () => void }) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  useDialogFocus(rootRef, closeRef, onClose);
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}
+    <motion.div ref={rootRef} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.4 }}
       className="absolute inset-0 z-30 flex items-center justify-center overflow-y-auto bg-[rgba(4,3,8,0.94)] px-6 py-12 backdrop-blur-sm"
       role="dialog" aria-modal="true" aria-label="about alan turing">
       <div className="flex w-full max-w-lg flex-col gap-5">
@@ -471,7 +481,7 @@ function About({ onClose }: { onClose: () => void }) {
             <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer" className="text-[12px] text-ember underline-offset-4 hover:underline">{l.label}</a>
           ))}
         </div>
-        <button onClick={onClose} className="inline-flex min-h-[44px] items-center self-start text-[11px] uppercase tracking-widest text-bone-dim underline-offset-4 hover:text-bone hover:underline">
+        <button ref={closeRef} onClick={onClose} className="inline-flex min-h-[44px] items-center self-start text-[11px] uppercase tracking-widest text-bone-dim underline-offset-4 hover:text-bone hover:underline">
           close
         </button>
       </div>
@@ -527,8 +537,41 @@ function DecryptText({ text, className }: { text: string; className?: string }) 
   return <span className={className}>{out}</span>;
 }
 
+/**
+ * Dialog focus: move focus to `ref` on mount, restore it to whatever had it on
+ * unmount, and keep Tab inside `root`. aria-modal alone does not do any of this.
+ */
+function useDialogFocus(root: React.RefObject<HTMLElement | null>, target: React.RefObject<HTMLElement | null>, onEscape?: () => void) {
+  useEffect(() => {
+    const prev = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    target.current?.focus({ preventScroll: true });
+    const onKey = (e: KeyboardEvent) => {
+      // only the topmost dialog handles keys (About opens over the intro)
+      const modals = document.querySelectorAll('[aria-modal="true"]');
+      if (modals[modals.length - 1] !== root.current) return;
+      if (e.key === 'Escape' && onEscape) { e.stopPropagation(); onEscape(); return; }
+      if (e.key !== 'Tab' || !root.current) return;
+      const items = Array.from(root.current.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'));
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement;
+      if (e.shiftKey && (active === first || !root.current.contains(active))) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && (active === last || !root.current.contains(active))) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      if (prev && document.contains(prev)) prev.focus({ preventScroll: true });
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+}
+
 function Brief({ onBegin, onAbout }: { onBegin: () => void; onAbout: () => void }) {
   const [showHow, setShowHow] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const beginRef = useRef<HTMLButtonElement>(null);
+  useDialogFocus(rootRef, beginRef);
   const reduce = useReducedMotion();
   const story = [
     'Manchester. The longest day, 1952.',
@@ -542,7 +585,7 @@ function Brief({ onBegin, onAbout }: { onBegin: () => void; onAbout: () => void 
     ['Survive', 'Daylight is your life. Last until dawn and you pass. Run out, and you go dark.'],
   ];
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.6 }}
+    <motion.div ref={rootRef} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.6 }}
       className="absolute inset-0 z-20 flex items-center justify-center px-6"
       role="dialog" aria-modal="true" aria-label="the night begins"
       style={{ background: 'linear-gradient(to bottom, rgba(6,5,12,0.28) 0%, rgba(5,4,10,0.58) 48%, rgba(4,3,8,0.88) 100%)' }}>
@@ -562,11 +605,11 @@ function Brief({ onBegin, onAbout }: { onBegin: () => void; onAbout: () => void 
 
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={at(0.4 + story.length * 1.1)} className="flex flex-col gap-5">
           <div className="flex items-baseline gap-3">
-            <h1 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-[0.32em] text-bone">PASS</h1>
+            <h2 className="font-[family-name:var(--font-display)] text-3xl font-semibold tracking-[0.32em] text-bone">PASS</h2>
             <span className="text-[11px] uppercase tracking-widest text-ash">decode · answer · survive</span>
           </div>
           <div className="flex items-center gap-5">
-            <button onClick={onBegin} className="inline-flex min-h-[44px] items-center justify-center rounded-sm bg-ember px-7 font-[family-name:var(--font-sans)] text-sm font-medium text-ink transition-colors hover:bg-[#ffb74d]">
+            <button ref={beginRef} onClick={onBegin} className="inline-flex min-h-[44px] items-center justify-center rounded-sm bg-ember px-7 font-[family-name:var(--font-sans)] text-sm font-medium text-ink transition-colors hover:bg-[#ffb74d]">
               Begin the night
             </button>
             <button onClick={() => setShowHow((v) => !v)} className="text-[11px] uppercase tracking-widest text-bone-dim underline-offset-4 hover:text-bone hover:underline">
