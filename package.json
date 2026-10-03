@@ -39,6 +39,7 @@
   },
   "pnpm": {
     "overrides": {
+      "brace-expansion": ">=5.0.12 <6",
       "esbuild": "^0.28.1",
       "postcss": ">=8.5.23 <9"
     }
