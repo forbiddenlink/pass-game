@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Ally accessibility scan
         continue-on-error: true
-        uses: forbiddenlink/ally@c39526cc705bfc4cbce7ccaa50558b1502e0cac9 # main
+        uses: forbiddenlink/ally@32f7847f6818f9043f262085726b7fe93f91a35b # main
         with:
           path: "."
           threshold: "9999"
