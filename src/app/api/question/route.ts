@@ -13,7 +13,7 @@ export const runtime = 'nodejs';
  * clamped to 1..5 because both are interpolated into the prompt.
  */
 export async function POST(req: Request) {
-  const gate = guardAiRequest(req);
+  const gate = await guardAiRequest(req);
   if (gate.status === 'forbidden') return forbiddenResponse();
 
   const body = await readBody(req);

@@ -12,7 +12,7 @@ export const runtime = 'nodejs';
  * Never 500s.
  */
 export async function POST(req: Request) {
-  const gate = guardAiRequest(req);
+  const gate = await guardAiRequest(req);
   if (gate.status === 'forbidden') return forbiddenResponse();
 
   const body = await readBody(req);
