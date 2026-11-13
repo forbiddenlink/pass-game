@@ -12,7 +12,7 @@ export const runtime = 'nodejs';
  * always works. A guard refusal sets rateLimited so the client stops prefetching.
  */
 export async function POST(req: Request) {
-  const gate = guardAiRequest(req);
+  const gate = await guardAiRequest(req);
   if (gate.status === 'forbidden') return forbiddenResponse();
 
   const body = await readBody(req);
