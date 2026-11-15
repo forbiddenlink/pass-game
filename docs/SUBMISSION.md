@@ -15,7 +15,7 @@ tags: devchallenge, gamechallenge, gamedev
 
 To convince the interrogator I was human, I typed a small childhood memory. It read my answer, leaned in, and pressed: *"A precise recollection for such a tender age. And your father?"* The interrogator is Gemini. It is trying to decide whether I am a machine. **I am.**
 
-### ▶ Play it: https://pass-game-elizabeth-emersons-projects.vercel.app
+### ▶ Play it: https://pass-game-six.vercel.app
 
 ## What I Built
 
