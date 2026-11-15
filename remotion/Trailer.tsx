@@ -119,7 +119,7 @@ const TitleCard: React.FC = () => {
       <div style={{ position: 'relative', display: 'flex', flexDirection: 'column', gap: 18, opacity: fade(f, 6, 300) }}>
         <div style={{ fontSize: 110, fontWeight: 600, letterSpacing: 24, color: BONE }}>PASS</div>
         <div style={{ fontStyle: 'italic', fontSize: 30, color: DIM }}>a solstice interrogation</div>
-        <div style={{ fontFamily: MONO, fontSize: 20, color: EMBER, marginTop: 18 }}>pass-game-elizabeth-emersons-projects.vercel.app</div>
+        <div style={{ fontFamily: MONO, fontSize: 20, color: EMBER, marginTop: 18 }}>pass-game-six.vercel.app</div>
       </div>
     </Frame>
   );
