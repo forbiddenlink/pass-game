@@ -27,6 +27,8 @@ Copy `.env.example` to `.env.local`. The one variable is optional:
 
 `GOOGLE_API_KEY` and `GOOGLE_GENERATIVE_AI_API_KEY` are also accepted. The key is server-only and never reaches the browser.
 
+Optional spend guard for the four Gemini routes (`src/lib/guard.ts`): set `PASS_AI_DISABLED=1` (or `true`) to force the offline fallback, and set both `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` to keep rate limits in Redis. Without Redis, limits are counted in memory per server instance (20 requests per IP per minute, 400 per IP per day, 4000 per instance per day).
+
 ## Commands
 
 | Command | Does |
@@ -45,7 +47,7 @@ Copy `.env.example` to `.env.local`. The one variable is optional:
 ```
 src/
   app/            Next.js App Router; api/{judge,press,question,casefile} are the Gemini routes
-  components/     Game.tsx (the whole client game), Scene/Rotor/TellMeter (the room + cipher UI)
+  components/     Game.tsx (the whole client game), Scene/Rotor/TellMeter/ShaderBackground (the room + cipher UI)
   lib/
     game.ts       Pure, deterministic state machine (light economy, phases, win/lose). Framework-free.
     cipher.ts     The cipher engine. encode/decode with a verified round-trip invariant.
@@ -54,6 +56,10 @@ src/
     score.ts      Offline heuristic judge (the fallback for gemini.ts).
     lines.ts      Offline noir interrogator lines + case-file verdicts.
     history.ts    The real, cited Turing/Bletchley history shown in intercepts + the About panel.
+    guard.ts      Request guarding for the API routes.
+    validate.ts   Input validation for the API routes.
+    sound.ts      Sound effects.
+    site.ts       Site metadata.
 remotion/         The trailer composition
 prototype/        Throwaway node scripts used to tune the daylight economy (see prototype/NOTES.md)
 docs/             SUBMISSION.md (the DEV post) + screenshots
@@ -65,7 +71,7 @@ The game is one client component (`Game.tsx`) over a pure state machine (`game.t
 
 - **Death is objective, not AI-decided.** An earlier version let the AI decide whether you lived; that felt broken to lose to. Daylight is now a currency you spend on decoding and answering, and you die when it hits zero. The AI only affects your score and the interrogation. Do not re-couple death to the AI.
 - **Never trust an LLM with ciphertext.** LLMs are unreliable at character-level transforms. Gemini supplies a plaintext and a cipher *spec*; `cipher.ts` builds and verifies the ciphertext locally and refuses to ship a puzzle unless `decode(encode(plain)) === plain`. Keep that gate.
-- **The economy is tuned.** `game.ts` uses `start: 160, turns: 8`, already balanced past the `prototype/` sim. Do not re-balance this close to a deadline.
+- **The economy is tuned.** `game.ts` uses `start: 160, turns: 8`, balanced against the `prototype/` sim. Re-run `pnpm sim` if you change it.
 - **House rule: no em dashes** anywhere in player-facing copy or the DEV post. The Gemini prompts also instruct against them, since the AI's spoken lines render on screen.
 
 ## Deploy
@@ -75,6 +81,10 @@ Pushing to the connected branch auto-deploys on Vercel. Set `GEMINI_API_KEY` in 
 ## Cost
 
 Gemini 2.5 Flash is the only paid dependency, usage-based per API call (four short calls per exchange). Vercel hosting is on the free/hobby tier. With no key the game costs nothing to run. Check spend at https://aistudio.google.com.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
 
 ## Credits
 
