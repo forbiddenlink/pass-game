@@ -1,3 +1,4 @@
+import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 
 // Report-only until the console is clean on a real playthrough, then rename the key to
@@ -33,4 +34,11 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  org: "imkindageeky",
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  // Builds without the token (local, forks, previews) skip upload instead of failing.
+  sourcemaps: { disable: !process.env.SENTRY_AUTH_TOKEN },
+});
