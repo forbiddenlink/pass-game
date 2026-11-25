@@ -47,7 +47,7 @@ Next.js 16, React 19, TypeScript, Tailwind. The interrogation room is pure CSS a
 
 ![The caesar rotor mid-decode](REPLACE_WITH_UPLOADED_URL/cipher-rotor.png)
 
-**The Gemini integration is the heart of it.** It is Gemini 2.5 Flash with structured output, doing four distinct jobs:
+**The Gemini integration is the heart of it.** It is Gemini 3.5 Flash-Lite with structured output, doing four distinct jobs:
 
 1. **It writes each night's questions**, so no two nights interrogate you the same way.
 2. **It judges how human your reply reads**, returning a `responseSchema` with `human_score`, a `tell`, and a spoken line, at temperature 0.1 so a retested answer scores the same.
