@@ -1,4 +1,4 @@
-// Build-time art generation with Gemini (Nano Banana, gemini-2.5-flash-image).
+// Build-time art generation with Gemini (Nano Banana, gemini-3.1-flash-lite-image).
 // Run: node scripts/gen-art.mjs   (reads GEMINI_API_KEY from env or .env.local)
 // Writes PNGs to public/. Commit them; do NOT generate at runtime.
 import { GoogleGenAI } from '@google/genai';
@@ -35,7 +35,7 @@ for (const a of ASSETS) {
   process.stdout.write(`generating ${a.name}... `);
   try {
     const res = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
+      model: 'gemini-3.1-flash-lite-image',
       contents: a.prompt,
     });
     const parts = res.candidates?.[0]?.content?.parts ?? [];

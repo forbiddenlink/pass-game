@@ -80,7 +80,7 @@ Pushing to the connected branch auto-deploys on Vercel. Set `GEMINI_API_KEY` in 
 
 ## Cost
 
-Gemini 2.5 Flash is the only paid dependency, usage-based per API call (four short calls per exchange). Vercel hosting is on the free/hobby tier. With no key the game costs nothing to run. Check spend at https://aistudio.google.com.
+Gemini 3.5 Flash-Lite is the only paid dependency, usage-based per API call (four short calls per exchange). Vercel hosting is on the free/hobby tier. With no key the game costs nothing to run. Check spend at https://aistudio.google.com.
 
 ## License
 

@@ -15,14 +15,14 @@ import { THEME_TAGS, type ThemeTag } from './puzzle';
 const asTheme = (t: string): ThemeTag =>
   (THEME_TAGS as readonly string[]).includes(t) ? (t as ThemeTag) : 'identity';
 
-const MODEL = 'gemini-2.5-flash';
+const MODEL = 'gemini-3.5-flash-lite';
 
-// Gemini 2.5 Flash runs "thinking" by default, which added 7-12s per call in
-// playtest — long enough that the interrogator beat reads as frozen. Disable it.
-// The judge task is tightly constrained by the schema + system prompt, so the
-// reasoning budget bought latency, not accuracy. Tuning knob: raise the judge's
-// budget if contradiction-catching regresses (it leans on recentTranscript).
-const NO_THINKING = { thinkingBudget: 0 } as const;
+// Gemini 2.5 Flash ran "thinking" by default (7-12s per call in playtest), so
+// we sent thinkingBudget: 0. Gemini 3.5 Flash-Lite does not think by default
+// (thoughtsTokenCount is empty, ~1s per call) and rejects thinkingBudget: 0 with
+// a 400, so no thinkingConfig is sent. The judge task is tightly constrained by
+// the schema + system prompt. Tuning knob: raise the judge's reasoning if
+// contradiction-catching regresses (it leans on recentTranscript).
 
 export function geminiKey(): string | null {
   return (
@@ -99,7 +99,6 @@ Judge how human the reply reads.`,
       systemInstruction: personaSystem(JUDGE_SYSTEM, input.persona),
       temperature: 0.1, // near-deterministic so a retested reply scores the same
       maxOutputTokens: 300, // tell + line + contradiction are a sentence each; bounds cost per call
-      thinkingConfig: NO_THINKING,
       responseMimeType: 'application/json',
       responseSchema: {
         type: Type.OBJECT,
@@ -139,7 +138,7 @@ export async function pressFollowup(input: { question: string; reply: string; re
         ],
       },
     ],
-    config: { systemInstruction: personaSystem(PRESS_SYSTEM, input.persona), temperature: 0.8, maxOutputTokens: 60, thinkingConfig: NO_THINKING },
+    config: { systemInstruction: personaSystem(PRESS_SYSTEM, input.persona), temperature: 0.8, maxOutputTokens: 60 },
   });
   // Safety net: if the model still emits labels/quotes, keep only the first clean line.
   const raw = (res.text ?? '').trim();
@@ -178,7 +177,6 @@ export async function caseFile(input: { transcript: string; outcome: string; bel
         'You are a 1952 British intelligence analyst filing a terse case report after an interrogation. Clipped, bureaucratic, period-accurate, faintly chilling. No modern words. classification is 2-4 words (e.g. "INCONCLUSIVE", "MACHINE TERMINATED", "HUMAN, PROBABLE"). Never use em dashes anywhere in your output. note is one or two sentences citing something specific from the transcript. recommendation is one short clause.',
       temperature: 0.85,
       maxOutputTokens: 220,
-      thinkingConfig: NO_THINKING,
       responseMimeType: 'application/json',
       responseSchema: {
         type: Type.OBJECT,
@@ -220,7 +218,6 @@ export async function generateQuestion(input: {
       systemInstruction: QUESTION_SYSTEM,
       temperature: 0.9, // questions want variety
       maxOutputTokens: 80, // one 6-10 word question plus the theme tag
-      thinkingConfig: NO_THINKING,
       responseMimeType: 'application/json',
       responseSchema: {
         type: Type.OBJECT,
