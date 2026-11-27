@@ -20,6 +20,7 @@ import { interrogatorLine, pressLine } from '@/lib/lines';
 import { CIPHER_LEARN, interceptFor, ABOUT } from '@/lib/history';
 import { sound } from '@/lib/sound';
 import Scene from '@/components/Scene';
+import { endSentence } from '@/lib/text';
 import ShaderBackground from '@/components/ShaderBackground';
 import Rotor from '@/components/Rotor';
 import TellMeter from '@/components/TellMeter';
@@ -642,7 +643,7 @@ function Panel({ children, reduce }: { children: React.ReactNode; reduce: boolea
     <motion.section
       initial={reduce ? false : { opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} exit={reduce ? undefined : { opacity: 0, y: -10 }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      className="relative overflow-hidden rounded-sm bg-[rgba(10,8,14,0.66)] p-6 shadow-[0_10px_34px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-[3px]">
+      className="relative overflow-hidden rounded-sm bg-[rgba(10,8,14,0.66)] p-6 shadow-[0_10px_34px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-[3px] max-sm:bg-[rgba(10,8,14,0.9)]">
       {/* the lamp pools warm light onto the page */}
       <div aria-hidden className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_50%_-12%,rgba(244,178,88,0.11),transparent_58%)]" />
       <div className="relative flex flex-col gap-5">{children}</div>
@@ -694,7 +695,7 @@ function Transcript({ items }: { items: Exchange[] }) {
         <div key={i} className="flex flex-col gap-0.5 opacity-75">
           <p className="font-[family-name:var(--font-display)] text-[15px] italic leading-snug text-bone-dim">“{e.q}{e.press ? '' : '?'}”</p>
           <p className="text-[13px] text-bone-dim/70">{e.a === SILENCE ? <span className="italic text-ash">silence</span> : `“${e.a}”`}</p>
-          <p className="text-[12px] italic text-ember/70">{e.line}</p>
+          <p className="text-[12px] italic text-ember/70">{endSentence(e.line)}</p>
         </div>
       ))}
     </div>
@@ -775,14 +776,14 @@ function VerdictBeat({ verdict, onContinue, last }: { verdict: Verdict; onContin
           <p className="mt-1 text-[13px] italic leading-relaxed text-bone-dim">But a moment ago you said: &ldquo;{verdict.contradiction}&rdquo;</p>
         </div>
       )}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 pr-28">
         <Portrait persona={verdict.persona} />
         <span className={`text-[10px] font-medium uppercase tracking-[0.32em] ${verdict.persona === 'hard' ? 'text-[#d9483c]' : 'text-ember/80'}`}>
           {PERSONA_NAME[verdict.persona]} · {PERSONA_ROLE[verdict.persona]}
         </span>
       </div>
-      <Typewriter text={verdict.line} className="font-[family-name:var(--font-display)] text-xl italic leading-snug text-bone" />
-      {verdict.tell && <p className="text-[12px] text-bone-dim">{verdict.tell}.</p>}
+      <Typewriter text={endSentence(verdict.line)} className="font-[family-name:var(--font-display)] text-xl italic leading-snug text-bone" />
+      {verdict.tell && <p className="text-[12px] text-bone-dim">{endSentence(verdict.tell)}</p>}
       <p className={`text-[11px] uppercase tracking-widest ${verdict.good ? 'text-ember' : 'text-ash'}`}>
         {verdict.skip ? 'their suspicion sharpens' : verdict.good ? 'their suspicion eases' : 'their suspicion sharpens'}
       </p>
